@@ -1,3 +1,5 @@
+import { SearchForm } from '@/components/approval/SearchForm'
+
 export default function AprovacaoPage() {
   return (
     <div>
@@ -5,7 +7,8 @@ export default function AprovacaoPage() {
       <p className="text-gray-500 text-sm mb-6">
         Revise as empresas encontradas e decida quem vai receber o WhatsApp.
       </p>
-      <p className="text-gray-400">Nenhuma empresa para revisar no momento.</p>
+      <SearchForm />
+      <p className="text-gray-400 mt-6">Nenhuma empresa para revisar no momento.</p>
     </div>
   )
 }
