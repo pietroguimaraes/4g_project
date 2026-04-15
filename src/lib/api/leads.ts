@@ -25,3 +25,17 @@ export async function updateLeadStatus(
 
   return response.json()
 }
+
+export async function bulkApproveLeads(): Promise<{ updated: number }> {
+  const response = await fetch('/api/leads/bulk-approve', {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+  })
+
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(error.error || 'Erro ao aprovar em lote')
+  }
+
+  return response.json()
+}

@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { DndContext } from '@dnd-kit/core'
 import { useLocalizados } from '@/hooks/useLocalizados'
 import { SwipeCard } from './SwipeCard'
+import { BulkApproveButton } from './BulkApproveButton'
 import { updateLeadStatus } from '@/lib/api/leads'
 import type { Lead } from '@/types'
 
@@ -11,6 +12,7 @@ export function AprovacaoList() {
   const { leads: initialLeads, loading } = useLocalizados()
   const [leads, setLeads] = useState<Lead[] | null>(null)
   const [erro, setErro] = useState<string | null>(null)
+  const [sucesso, setSucesso] = useState<string | null>(null)
 
   // Usa leads do hook até o primeiro swipe, depois usa estado local
   const displayLeads = leads ?? initialLeads
@@ -37,6 +39,11 @@ export function AprovacaoList() {
     }
   }
 
+  function handleBulkSuccess(updated: number) {
+    setLeads([])
+    setSucesso(`${updated} empresa${updated > 1 ? 's' : ''} aprovada${updated > 1 ? 's' : ''} para prospecção!`)
+  }
+
   if (loading) {
     return <p className="text-gray-400 text-sm">Carregando empresas...</p>
   }
@@ -45,15 +52,17 @@ export function AprovacaoList() {
 
   return (
     <div>
-      <p className="text-sm text-gray-600 mb-4 font-medium">
-        {count > 0
-          ? `${count} empresa${count > 1 ? 's' : ''} aguardando revisão`
-          : 'Nenhuma empresa para revisar no momento.'}
-      </p>
+      <div className="flex items-center justify-between mb-4">
+        <p className="text-sm text-gray-600 font-medium">
+          {count > 0
+            ? `${count} empresa${count > 1 ? 's' : ''} aguardando revisão`
+            : 'Nenhuma empresa para revisar no momento.'}
+        </p>
+        <BulkApproveButton count={count} onSuccess={handleBulkSuccess} />
+      </div>
 
-      {erro && (
-        <p className="text-red-600 text-sm mb-3">{erro}</p>
-      )}
+      {erro && <p className="text-red-600 text-sm mb-3">{erro}</p>}
+      {sucesso && <p className="text-green-600 text-sm mb-3">{sucesso}</p>}
 
       {count > 0 && (
         <DndContext>
