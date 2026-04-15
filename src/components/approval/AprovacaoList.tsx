@@ -1,26 +1,73 @@
 'use client'
 
+import { useState } from 'react'
+import { DndContext } from '@dnd-kit/core'
 import { useLocalizados } from '@/hooks/useLocalizados'
-import { LeadCard } from './LeadCard'
+import { SwipeCard } from './SwipeCard'
+import { updateLeadStatus } from '@/lib/api/leads'
+import type { Lead } from '@/types'
 
 export function AprovacaoList() {
-  const { leads, count, loading } = useLocalizados()
+  const { leads: initialLeads, loading } = useLocalizados()
+  const [leads, setLeads] = useState<Lead[] | null>(null)
+  const [erro, setErro] = useState<string | null>(null)
+
+  // Usa leads do hook até o primeiro swipe, depois usa estado local
+  const displayLeads = leads ?? initialLeads
+
+  function removeLeadFromList(telefone: string) {
+    setLeads((prev) => (prev ?? initialLeads).filter((l) => l.telefone !== telefone))
+  }
+
+  async function handleApprove(lead: Lead) {
+    try {
+      await updateLeadStatus(lead.telefone, 'PROSPECTAR')
+      removeLeadFromList(lead.telefone)
+    } catch {
+      setErro('Erro ao aprovar. Tente novamente.')
+    }
+  }
+
+  async function handleDiscard(lead: Lead) {
+    try {
+      await updateLeadStatus(lead.telefone, 'DESCARTADOS')
+      removeLeadFromList(lead.telefone)
+    } catch {
+      setErro('Erro ao descartar. Tente novamente.')
+    }
+  }
 
   if (loading) {
     return <p className="text-gray-400 text-sm">Carregando empresas...</p>
   }
 
+  const count = displayLeads.length
+
   return (
     <div>
       <p className="text-sm text-gray-600 mb-4 font-medium">
-        {count > 0 ? `${count} empresa${count > 1 ? 's' : ''} aguardando revisão` : 'Nenhuma empresa para revisar no momento.'}
+        {count > 0
+          ? `${count} empresa${count > 1 ? 's' : ''} aguardando revisão`
+          : 'Nenhuma empresa para revisar no momento.'}
       </p>
+
+      {erro && (
+        <p className="text-red-600 text-sm mb-3">{erro}</p>
+      )}
+
       {count > 0 && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          {leads.map((lead) => (
-            <LeadCard key={lead.id} lead={lead} />
-          ))}
-        </div>
+        <DndContext>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {displayLeads.map((lead) => (
+              <SwipeCard
+                key={lead.telefone}
+                lead={lead}
+                onApprove={handleApprove}
+                onDiscard={handleDiscard}
+              />
+            ))}
+          </div>
+        </DndContext>
       )}
     </div>
   )
