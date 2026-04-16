@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
-import type { LeadStatus } from '@/types'
+import type { LeadStatus, LeadCategoria } from '@/types'
+
+const VALID_CATEGORIAS: LeadCategoria[] = ['DOMÉSTICOS', 'ESPORTIVOS', 'MISTO']
 
 const VALID_STATUSES: LeadStatus[] = [
   'LOCALIZADOS', 'PROSPECTAR', 'PROSPECTADOS', 'INTERESSE', 'TRANSFERIDOS', 'DESCARTADOS',
@@ -38,7 +40,7 @@ export async function PATCH(
     return NextResponse.json({ error: 'Body inválido' }, { status: 400 })
   }
 
-  const { status } = body as Record<string, unknown>
+  const { status, categoria, nota } = body as Record<string, unknown>
 
   if (!status || !VALID_STATUSES.includes(status as LeadStatus)) {
     return NextResponse.json(
@@ -47,9 +49,22 @@ export async function PATCH(
     )
   }
 
+  const updates: Record<string, unknown> = { status: status as LeadStatus }
+
+  if (categoria && VALID_CATEGORIAS.includes(categoria as LeadCategoria)) {
+    updates.categoria = categoria as LeadCategoria
+  }
+
+  if (nota !== undefined && nota !== null) {
+    const notaNum = Number(nota)
+    if (!isNaN(notaNum) && notaNum >= 0 && notaNum <= 10) {
+      updates.nota = notaNum
+    }
+  }
+
   const { data, error: dbError } = await supabase
     .from('leads')
-    .update({ status: status as LeadStatus })
+    .update(updates)
     .eq('telefone', telefone)
     .select('id, empresa, telefone, status')
     .single()
