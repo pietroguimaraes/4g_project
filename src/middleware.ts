@@ -27,7 +27,13 @@ export async function middleware(request: NextRequest) {
 
   const { data: { user } } = await supabase.auth.getUser()
 
-  const isLoginPage = request.nextUrl.pathname === '/login'
+  const { pathname } = request.nextUrl
+  const isLoginPage = pathname === '/login'
+
+  // Rotas de API têm autenticação própria (x-api-key ou sessão) — deixa passar
+  if (pathname.startsWith('/api/')) {
+    return supabaseResponse
+  }
 
   // Se não está logado e não está na página de login → redireciona para /login
   if (!user && !isLoginPage) {
