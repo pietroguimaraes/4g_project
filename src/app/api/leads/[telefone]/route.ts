@@ -40,7 +40,7 @@ export async function PATCH(
     return NextResponse.json({ error: 'Body inválido' }, { status: 400 })
   }
 
-  const { status, categoria, nota } = body as Record<string, unknown>
+  const { status, categoria, nota, data_resposta, data_followup, qtd_reengajamentos } = body as Record<string, unknown>
 
   if (!status || !VALID_STATUSES.includes(status as LeadStatus)) {
     return NextResponse.json(
@@ -59,6 +59,21 @@ export async function PATCH(
     const notaNum = Number(nota)
     if (!isNaN(notaNum) && notaNum >= 0 && notaNum <= 10) {
       updates.nota = notaNum
+    }
+  }
+
+  if (data_resposta) {
+    updates.data_resposta = data_resposta
+  }
+
+  if (data_followup) {
+    updates.data_followup = data_followup
+  }
+
+  if (qtd_reengajamentos !== undefined && qtd_reengajamentos !== null) {
+    const qtd = Number(qtd_reengajamentos)
+    if (!isNaN(qtd) && qtd >= 0) {
+      updates.qtd_reengajamentos = qtd
     }
   }
 
