@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { createSearch } from '@/lib/api/searches'
 
 const TIPOS_LOJA = [
@@ -44,13 +44,29 @@ const ESTADOS = [
 ]
 
 export function SearchForm() {
-  const [pais] = useState('Brasil')
   const [estado, setEstado] = useState('')
   const [cidade, setCidade] = useState('')
+  const [cidades, setCidades] = useState<string[]>([])
+  const [loadingCidades, setLoadingCidades] = useState(false)
   const [quantidade, setQuantidade] = useState('')
   const [tipoLoja, setTipoLoja] = useState('')
   const [loading, setLoading] = useState(false)
   const [feedback, setFeedback] = useState<{ tipo: 'erro' | 'sucesso'; mensagem: string } | null>(null)
+
+  useEffect(() => {
+    if (!estado) {
+      setCidades([])
+      setCidade('')
+      return
+    }
+    setLoadingCidades(true)
+    setCidade('')
+    fetch(`https://servicodados.ibge.gov.br/api/v1/localidades/estados/${estado}/municipios?orderBy=nome`)
+      .then(r => r.json())
+      .then((data: { nome: string }[]) => setCidades(data.map(m => m.nome)))
+      .catch(() => setCidades([]))
+      .finally(() => setLoadingCidades(false))
+  }, [estado])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -60,8 +76,8 @@ export function SearchForm() {
       setFeedback({ tipo: 'erro', mensagem: 'Selecione o estado.' })
       return
     }
-    if (!cidade.trim()) {
-      setFeedback({ tipo: 'erro', mensagem: 'Digite o nome da cidade.' })
+    if (!cidade) {
+      setFeedback({ tipo: 'erro', mensagem: 'Selecione a cidade.' })
       return
     }
     if (!tipoLoja) {
@@ -76,18 +92,11 @@ export function SearchForm() {
 
     setLoading(true)
     try {
-      await createSearch({
-        pais,
-        estado,
-        cidade: cidade.trim(),
-        quantidade: qty,
-        tipo_loja: tipoLoja,
-      })
-
+      await createSearch({ pais: 'Brasil', estado, cidade, quantidade: qty, tipo_loja: tipoLoja })
       const estadoNome = ESTADOS.find(e => e.uf === estado)?.nome ?? estado
       setFeedback({
         tipo: 'sucesso',
-        mensagem: `Busca disparada com sucesso! O n8n vai procurar ${qty} empresa${qty > 1 ? 's' : ''} do tipo "${tipoLoja}" em ${cidade.trim()}, ${estadoNome}.`,
+        mensagem: `Busca disparada com sucesso! O n8n vai procurar ${qty} empresa${qty > 1 ? 's' : ''} do tipo "${tipoLoja}" em ${cidade}, ${estadoNome}.`,
       })
       setEstado('')
       setCidade('')
@@ -95,10 +104,7 @@ export function SearchForm() {
       setTipoLoja('')
     } catch (err) {
       const motivo = err instanceof Error ? err.message : 'Erro desconhecido.'
-      setFeedback({
-        tipo: 'erro',
-        mensagem: `Não foi possível iniciar a busca. Motivo: ${motivo}`,
-      })
+      setFeedback({ tipo: 'erro', mensagem: `Não foi possível iniciar a busca. Motivo: ${motivo}` })
     } finally {
       setLoading(false)
     }
@@ -126,14 +132,19 @@ export function SearchForm() {
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Cidade</label>
-          <input
-            type="text"
+          <select
             value={cidade}
             onChange={(e) => setCidade(e.target.value)}
-            placeholder="Ex: São Paulo"
-            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            disabled={loading}
-          />
+            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white disabled:text-gray-400"
+            disabled={loading || loadingCidades || !estado}
+          >
+            <option value="">
+              {!estado ? 'Selecione o estado primeiro' : loadingCidades ? 'Carregando cidades...' : 'Selecione...'}
+            </option>
+            {cidades.map((c) => (
+              <option key={c} value={c}>{c}</option>
+            ))}
+          </select>
         </div>
 
         <div>
@@ -178,7 +189,7 @@ export function SearchForm() {
 
       <button
         type="submit"
-        disabled={loading}
+        disabled={loading || loadingCidades}
         className="mt-4 w-full bg-blue-600 text-white rounded-md py-2 text-sm font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
       >
         {loading ? 'Iniciando busca...' : 'Iniciar Busca'}
