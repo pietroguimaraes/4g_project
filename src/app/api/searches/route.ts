@@ -16,9 +16,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Body inválido' }, { status: 400 })
   }
 
-  const { pais, estado, cidade, quantidade } = body as Record<string, unknown>
+  const { pais, estado, cidade, quantidade, tipo_loja } = body as Record<string, unknown>
 
-  if (!pais || !estado || !cidade || quantidade === undefined) {
+  if (!pais || !estado || !cidade || quantidade === undefined || !tipo_loja) {
     return NextResponse.json({ error: 'Todos os campos são obrigatórios' }, { status: 400 })
   }
 
@@ -34,6 +34,7 @@ export async function POST(request: NextRequest) {
       estado: String(estado),
       cidade: String(cidade),
       quantidade: qty,
+      tipo_loja: String(tipo_loja),
       status: 'PENDENTE',
     })
     .select('id')
@@ -55,6 +56,7 @@ export async function POST(request: NextRequest) {
           estado: String(estado),
           cidade: String(cidade),
           quantidade: qty,
+          tipo_loja: String(tipo_loja),
         }),
       })
     } catch {

@@ -3,11 +3,21 @@
 import { useState } from 'react'
 import { createSearch } from '@/lib/api/searches'
 
+const TIPOS_LOJA = [
+  'Loja de brinquedos',
+  'Artigos esportivos',
+  'Bazar e variedades',
+  'Sacoleiro / Atacadista',
+  'Loja de presentes',
+  'Comércio',
+]
+
 export function SearchForm() {
   const [pais, setPais] = useState('')
   const [estado, setEstado] = useState('')
   const [cidade, setCidade] = useState('')
   const [quantidade, setQuantidade] = useState('')
+  const [tipoLoja, setTipoLoja] = useState('')
   const [loading, setLoading] = useState(false)
   const [erro, setErro] = useState<string | null>(null)
   const [sucesso, setSucesso] = useState(false)
@@ -22,6 +32,10 @@ export function SearchForm() {
       setErro('Todos os campos são obrigatórios.')
       return
     }
+    if (!tipoLoja) {
+      setErro('Selecione o tipo de loja.')
+      return
+    }
     if (!quantidade || qty < 1 || qty > 100) {
       setErro('Quantidade deve ser entre 1 e 100.')
       return
@@ -29,12 +43,13 @@ export function SearchForm() {
 
     setLoading(true)
     try {
-      await createSearch({ pais: pais.trim(), estado: estado.trim(), cidade: cidade.trim(), quantidade: qty })
+      await createSearch({ pais: pais.trim(), estado: estado.trim(), cidade: cidade.trim(), quantidade: qty, tipo_loja: tipoLoja })
       setSucesso(true)
       setPais('')
       setEstado('')
       setCidade('')
       setQuantidade('')
+      setTipoLoja('')
     } catch (err) {
       setErro(err instanceof Error ? err.message : 'Erro inesperado.')
     } finally {
@@ -81,6 +96,21 @@ export function SearchForm() {
             className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             disabled={loading}
           />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Tipo de loja</label>
+          <select
+            value={tipoLoja}
+            onChange={(e) => setTipoLoja(e.target.value)}
+            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+            disabled={loading}
+          >
+            <option value="">Selecione...</option>
+            {TIPOS_LOJA.map((tipo) => (
+              <option key={tipo} value={tipo}>{tipo}</option>
+            ))}
+          </select>
         </div>
 
         <div>
