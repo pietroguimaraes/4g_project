@@ -13,46 +13,92 @@ const TIPOS_LOJA = [
   'Comércio',
 ]
 
+const ESTADOS = [
+  { uf: 'AC', nome: 'Acre' },
+  { uf: 'AL', nome: 'Alagoas' },
+  { uf: 'AP', nome: 'Amapá' },
+  { uf: 'AM', nome: 'Amazonas' },
+  { uf: 'BA', nome: 'Bahia' },
+  { uf: 'CE', nome: 'Ceará' },
+  { uf: 'DF', nome: 'Distrito Federal' },
+  { uf: 'ES', nome: 'Espírito Santo' },
+  { uf: 'GO', nome: 'Goiás' },
+  { uf: 'MA', nome: 'Maranhão' },
+  { uf: 'MT', nome: 'Mato Grosso' },
+  { uf: 'MS', nome: 'Mato Grosso do Sul' },
+  { uf: 'MG', nome: 'Minas Gerais' },
+  { uf: 'PA', nome: 'Pará' },
+  { uf: 'PB', nome: 'Paraíba' },
+  { uf: 'PR', nome: 'Paraná' },
+  { uf: 'PE', nome: 'Pernambuco' },
+  { uf: 'PI', nome: 'Piauí' },
+  { uf: 'RJ', nome: 'Rio de Janeiro' },
+  { uf: 'RN', nome: 'Rio Grande do Norte' },
+  { uf: 'RS', nome: 'Rio Grande do Sul' },
+  { uf: 'RO', nome: 'Rondônia' },
+  { uf: 'RR', nome: 'Roraima' },
+  { uf: 'SC', nome: 'Santa Catarina' },
+  { uf: 'SP', nome: 'São Paulo' },
+  { uf: 'SE', nome: 'Sergipe' },
+  { uf: 'TO', nome: 'Tocantins' },
+]
+
 export function SearchForm() {
-  const [pais, setPais] = useState('')
+  const [pais] = useState('Brasil')
   const [estado, setEstado] = useState('')
   const [cidade, setCidade] = useState('')
   const [quantidade, setQuantidade] = useState('')
   const [tipoLoja, setTipoLoja] = useState('')
   const [loading, setLoading] = useState(false)
-  const [erro, setErro] = useState<string | null>(null)
-  const [sucesso, setSucesso] = useState(false)
+  const [feedback, setFeedback] = useState<{ tipo: 'erro' | 'sucesso'; mensagem: string } | null>(null)
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    setErro(null)
-    setSucesso(false)
+    setFeedback(null)
 
-    const qty = Number(quantidade)
-    if (!pais.trim() || !estado.trim() || !cidade.trim()) {
-      setErro('Todos os campos são obrigatórios.')
+    if (!estado) {
+      setFeedback({ tipo: 'erro', mensagem: 'Selecione o estado.' })
+      return
+    }
+    if (!cidade.trim()) {
+      setFeedback({ tipo: 'erro', mensagem: 'Digite o nome da cidade.' })
       return
     }
     if (!tipoLoja) {
-      setErro('Selecione o tipo de loja.')
+      setFeedback({ tipo: 'erro', mensagem: 'Selecione o tipo de loja.' })
       return
     }
+    const qty = Number(quantidade)
     if (!quantidade || qty < 1 || qty > 100) {
-      setErro('Quantidade deve ser entre 1 e 100.')
+      setFeedback({ tipo: 'erro', mensagem: 'A quantidade deve ser entre 1 e 100.' })
       return
     }
 
     setLoading(true)
     try {
-      await createSearch({ pais: pais.trim(), estado: estado.trim(), cidade: cidade.trim(), quantidade: qty, tipo_loja: tipoLoja })
-      setSucesso(true)
-      setPais('')
+      await createSearch({
+        pais,
+        estado,
+        cidade: cidade.trim(),
+        quantidade: qty,
+        tipo_loja: tipoLoja,
+      })
+
+      const estadoNome = ESTADOS.find(e => e.uf === estado)?.nome ?? estado
+      setFeedback({
+        tipo: 'sucesso',
+        mensagem: `Busca disparada com sucesso! O n8n vai procurar ${qty} empresa${qty > 1 ? 's' : ''} do tipo "${tipoLoja}" em ${cidade.trim()}, ${estadoNome}.`,
+      })
       setEstado('')
       setCidade('')
       setQuantidade('')
       setTipoLoja('')
     } catch (err) {
-      setErro(err instanceof Error ? err.message : 'Erro inesperado.')
+      const motivo = err instanceof Error ? err.message : 'Erro desconhecido.'
+      setFeedback({
+        tipo: 'erro',
+        mensagem: `Não foi possível iniciar a busca. Motivo: ${motivo}`,
+      })
     } finally {
       setLoading(false)
     }
@@ -64,27 +110,18 @@ export function SearchForm() {
 
       <div className="grid grid-cols-1 gap-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">País</label>
-          <input
-            type="text"
-            value={pais}
-            onChange={(e) => setPais(e.target.value)}
-            placeholder="Ex: Brasil"
-            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            disabled={loading}
-          />
-        </div>
-
-        <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Estado</label>
-          <input
-            type="text"
+          <select
             value={estado}
             onChange={(e) => setEstado(e.target.value)}
-            placeholder="Ex: SP"
-            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
             disabled={loading}
-          />
+          >
+            <option value="">Selecione...</option>
+            {ESTADOS.map((e) => (
+              <option key={e.uf} value={e.uf}>{e.uf} — {e.nome}</option>
+            ))}
+          </select>
         </div>
 
         <div>
@@ -129,12 +166,14 @@ export function SearchForm() {
         </div>
       </div>
 
-      {erro && (
-        <p className="mt-3 text-sm text-red-600">{erro}</p>
-      )}
-
-      {sucesso && (
-        <p className="mt-3 text-sm text-green-600">Busca iniciada com sucesso! O n8n está processando.</p>
+      {feedback && (
+        <div className={`mt-4 p-3 rounded-md text-sm ${
+          feedback.tipo === 'sucesso'
+            ? 'bg-green-50 text-green-700 border border-green-200'
+            : 'bg-red-50 text-red-700 border border-red-200'
+        }`}>
+          {feedback.tipo === 'sucesso' ? '✅ ' : '❌ '}{feedback.mensagem}
+        </div>
       )}
 
       <button
