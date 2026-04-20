@@ -56,23 +56,29 @@ export async function PATCH(
   }
 
   if (nota !== undefined && nota !== null) {
-    const notaNum = Number(nota)
+    const notaNum = parseInt(String(nota), 10)
     if (!isNaN(notaNum) && notaNum >= 0 && notaNum <= 10) {
       updates.nota = notaNum
     }
   }
 
   if (data_resposta) {
-    updates.data_resposta = data_resposta
+    const parsed = new Date(data_resposta as string)
+    if (!isNaN(parsed.getTime())) {
+      updates.data_resposta = parsed.toISOString()
+    }
   }
 
   if (data_followup) {
-    updates.data_followup = data_followup
+    const parsed = new Date(data_followup as string)
+    if (!isNaN(parsed.getTime())) {
+      updates.data_followup = parsed.toISOString()
+    }
   }
 
   if (qtd_reengajamentos !== undefined && qtd_reengajamentos !== null) {
-    const qtd = Number(qtd_reengajamentos)
-    if (!isNaN(qtd) && qtd >= 0) {
+    const qtd = parseInt(String(qtd_reengajamentos), 10)
+    if (!isNaN(qtd) && qtd >= 0 && qtd <= 32767) {
       updates.qtd_reengajamentos = qtd
     }
   }
@@ -85,6 +91,10 @@ export async function PATCH(
     .single()
 
   if (dbError) {
+    console.error('[PATCH /api/leads] Supabase error:', dbError.code, dbError.message)
+    if (dbError.code === 'PGRST116') {
+      return NextResponse.json({ error: 'Lead não encontrado' }, { status: 404 })
+    }
     return NextResponse.json({ error: 'Erro ao atualizar lead' }, { status: 500 })
   }
 
