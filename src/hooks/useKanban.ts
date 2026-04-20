@@ -34,7 +34,7 @@ export function useKanban() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    fetch('/api/leads')
+    fetch(`/api/leads?statuses=${KANBAN_STATUSES.join(',')}`)
       .then((r) => r.json())
       .then((leads: Lead[]) => setKanban(groupByStatus(leads)))
       .finally(() => setLoading(false))

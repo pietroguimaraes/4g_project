@@ -90,9 +90,12 @@ export async function GET(request: NextRequest) {
 
   const { searchParams } = new URL(request.url)
   const status = searchParams.get('status')
+  const statuses = searchParams.get('statuses')
 
-  let query = supabase.from('leads').select('*').order('created_at', { ascending: false })
-  if (status) {
+  let query = supabase.from('leads').select('*').order('created_at', { ascending: false }).limit(500)
+  if (statuses) {
+    query = query.in('status', statuses.split(','))
+  } else if (status) {
     query = query.eq('status', status)
   }
 

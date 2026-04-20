@@ -35,6 +35,7 @@ export interface Search {
   pais: string
   estado: string
   cidade: string
+  tipo_loja?: string
   quantidade: number
   status: SearchStatus
   total_encontrados?: number

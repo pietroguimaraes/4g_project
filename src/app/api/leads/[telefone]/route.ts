@@ -49,7 +49,10 @@ export async function PATCH(
     )
   }
 
-  const updates: Record<string, unknown> = { status: status as LeadStatus }
+  const updates: Record<string, unknown> = {
+    status: status as LeadStatus,
+    updated_at: new Date().toISOString(),
+  }
 
   if (categoria && VALID_CATEGORIAS.includes(categoria as LeadCategoria)) {
     updates.categoria = categoria as LeadCategoria
