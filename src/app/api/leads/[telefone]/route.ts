@@ -15,11 +15,18 @@ export async function DELETE(
 ) {
   const { telefone } = await params
 
-  const supabase = await createClient()
-  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  // Verifica sessão do usuário
+  const supabaseUser = await createClient()
+  const { data: { user }, error: authError } = await supabaseUser.auth.getUser()
   if (authError || !user) {
     return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
   }
+
+  // Usa service role para garantir que o DELETE não seja bloqueado por RLS
+  const supabase = createServiceClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
 
   const { error } = await supabase
     .from('leads')
