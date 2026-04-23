@@ -5,6 +5,7 @@ export type LeadStatus =
   | 'INTERESSE'
   | 'TRANSFERIDOS'
   | 'DESCARTADOS'
+  | 'NAO_RESPONDERAM'
 
 export type LeadCategoria = 'DOMÉSTICOS' | 'ESPORTIVOS' | 'MISTO'
 

@@ -6,7 +6,7 @@ import type { LeadStatus, LeadCategoria } from '@/types'
 const VALID_CATEGORIAS: LeadCategoria[] = ['DOMÉSTICOS', 'ESPORTIVOS', 'MISTO']
 
 const VALID_STATUSES: LeadStatus[] = [
-  'LOCALIZADOS', 'PROSPECTAR', 'PROSPECTADOS', 'INTERESSE', 'TRANSFERIDOS', 'DESCARTADOS',
+  'LOCALIZADOS', 'PROSPECTAR', 'PROSPECTADOS', 'INTERESSE', 'TRANSFERIDOS', 'DESCARTADOS', 'NAO_RESPONDERAM',
 ]
 
 export async function PATCH(
@@ -103,6 +103,18 @@ export async function PATCH(
 
   if (!data) {
     return NextResponse.json({ error: 'Lead não encontrado' }, { status: 404 })
+  }
+
+  // Dispara webhook do n8n quando lead entra em PROSPECTADOS (novo ou follow-up)
+  if (status === 'PROSPECTADOS') {
+    const prospectuarUrl = process.env.N8N_PROSPECTAR_URL
+    if (prospectuarUrl) {
+      fetch(prospectuarUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ telefone: data.telefone, empresa: data.empresa }),
+      }).catch(() => {})
+    }
   }
 
   return NextResponse.json(data)

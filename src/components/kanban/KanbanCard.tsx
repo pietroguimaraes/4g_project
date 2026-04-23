@@ -4,6 +4,13 @@ import { useState } from 'react'
 import { useDraggable } from '@dnd-kit/core'
 import { updateLeadStatus } from '@/lib/api/leads'
 import type { Lead, LeadCategoria } from '@/types'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog'
 
 interface KanbanCardProps {
   lead: Lead
@@ -69,15 +76,79 @@ export function KanbanCard({ lead, borderColor }: KanbanCardProps) {
 
       <p className="text-gray-300 text-xs mt-1">{formatDate(lead.data_coleta)}</p>
 
-      {lead.status === 'INTERESSE' && (
-        <button
-          onClick={handleTransfer}
-          disabled={transferring}
-          className="mt-2 w-full text-xs bg-green-600 text-white rounded px-2 py-1 hover:bg-green-700 disabled:opacity-50 transition-colors"
-        >
-          {transferring ? 'Transferindo...' : 'Transferir para Closer'}
-        </button>
-      )}
+      <div className="mt-2 flex gap-1">
+        <Dialog>
+          <DialogTrigger asChild>
+            <button
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={(e) => e.stopPropagation()}
+              className="flex-1 text-xs bg-gray-100 text-gray-600 rounded px-2 py-1 hover:bg-gray-200 transition-colors"
+            >
+              Ver dados
+            </button>
+          </DialogTrigger>
+          <DialogContent className="max-w-sm">
+            <DialogHeader>
+              <DialogTitle>{lead.empresa}</DialogTitle>
+            </DialogHeader>
+            <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+              <span className="text-gray-500">Telefone</span>
+              <span className="text-gray-800">{lead.telefone}</span>
+              {lead.website && <>
+                <span className="text-gray-500">Website</span>
+                <span className="text-gray-800 truncate">{lead.website}</span>
+              </>}
+              {lead.cidade && <>
+                <span className="text-gray-500">Cidade</span>
+                <span className="text-gray-800">{lead.cidade}</span>
+              </>}
+              {lead.estado && <>
+                <span className="text-gray-500">Estado</span>
+                <span className="text-gray-800">{lead.estado}</span>
+              </>}
+              {lead.pais && <>
+                <span className="text-gray-500">País</span>
+                <span className="text-gray-800">{lead.pais}</span>
+              </>}
+              <span className="text-gray-500">Status</span>
+              <span className="text-gray-800">{lead.status}</span>
+              {lead.categoria && <>
+                <span className="text-gray-500">Categoria</span>
+                <span className="text-gray-800">{lead.categoria}</span>
+              </>}
+              {lead.nota != null && <>
+                <span className="text-gray-500">Nota</span>
+                <span className="text-gray-800">★ {lead.nota}/10</span>
+              </>}
+              <span className="text-gray-500">Coleta</span>
+              <span className="text-gray-800">{formatDate(lead.data_coleta)}</span>
+              {lead.data_resposta && <>
+                <span className="text-gray-500">Resposta</span>
+                <span className="text-gray-800">{formatDate(lead.data_resposta)}</span>
+              </>}
+              {lead.data_followup && <>
+                <span className="text-gray-500">Follow-up</span>
+                <span className="text-gray-800">{formatDate(lead.data_followup)}</span>
+              </>}
+              {lead.qtd_reengajamentos > 0 && <>
+                <span className="text-gray-500">Reengajamentos</span>
+                <span className="text-gray-800">{lead.qtd_reengajamentos}</span>
+              </>}
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {lead.status === 'INTERESSE' && (
+          <button
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={(e) => { e.stopPropagation(); handleTransfer() }}
+            disabled={transferring}
+            className="flex-1 text-xs bg-green-600 text-white rounded px-2 py-1 hover:bg-green-700 disabled:opacity-50 transition-colors"
+          >
+            {transferring ? 'Transferindo...' : 'Transferir'}
+          </button>
+        )}
+      </div>
     </div>
   )
 }

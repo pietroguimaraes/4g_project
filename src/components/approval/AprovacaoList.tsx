@@ -23,7 +23,7 @@ export function AprovacaoList() {
 
   async function handleApprove(lead: Lead) {
     try {
-      await updateLeadStatus(lead.telefone, 'PROSPECTAR')
+      await updateLeadStatus(lead.telefone, 'PROSPECTADOS')
       removeLeadFromList(lead.telefone)
     } catch {
       setErro('Erro ao aprovar. Tente novamente.')

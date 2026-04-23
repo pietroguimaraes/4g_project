@@ -9,6 +9,7 @@ import type { Lead, LeadStatus } from '@/types'
 
 const COLUNAS = [
   { status: 'PROSPECTADOS' as const, titulo: 'Prospectados', headerColor: 'border-blue-400', borderColor: 'border-l-blue-400' },
+  { status: 'NAO_RESPONDERAM' as const, titulo: 'Não Responderam', headerColor: 'border-yellow-400', borderColor: 'border-l-yellow-400' },
   { status: 'INTERESSE' as const, titulo: 'Interesse', headerColor: 'border-orange-400', borderColor: 'border-l-orange-400' },
   { status: 'TRANSFERIDOS' as const, titulo: 'Transferidos', headerColor: 'border-green-400', borderColor: 'border-l-green-400' },
   { status: 'DESCARTADOS' as const, titulo: 'Descartados', headerColor: 'border-gray-400', borderColor: 'border-l-gray-400' },
@@ -70,7 +71,7 @@ export default function KanbanPage() {
       <h1 className="text-2xl font-bold mb-6">Kanban de Funil</h1>
       {erro && <p className="text-red-600 text-sm mb-4">{erro}</p>}
       <DndContext onDragEnd={handleDragEnd}>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
           {COLUNAS.map((col) => (
             <KanbanColumn
               key={col.status}

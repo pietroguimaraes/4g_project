@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import type { Lead, LeadStatus } from '@/types'
 
-const KANBAN_STATUSES: LeadStatus[] = ['PROSPECTADOS', 'INTERESSE', 'TRANSFERIDOS', 'DESCARTADOS']
+const KANBAN_STATUSES: LeadStatus[] = ['PROSPECTADOS', 'NAO_RESPONDERAM', 'INTERESSE', 'TRANSFERIDOS', 'DESCARTADOS']
 
 type KanbanMap = Record<LeadStatus, Lead[]>
 
@@ -13,6 +13,7 @@ function emptyMap(): KanbanMap {
     LOCALIZADOS: [],
     PROSPECTAR: [],
     PROSPECTADOS: [],
+    NAO_RESPONDERAM: [],
     INTERESSE: [],
     TRANSFERIDOS: [],
     DESCARTADOS: [],
