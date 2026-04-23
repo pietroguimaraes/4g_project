@@ -7,10 +7,24 @@ import type { Lead, LeadCategoria } from '@/types'
 import {
   Dialog,
   DialogContent,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogClose,
 } from '@/components/ui/dialog'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog'
+import { deleteLead } from '@/lib/api/leads'
 
 interface KanbanCardProps {
   lead: Lead
@@ -29,6 +43,7 @@ function formatDate(dateStr: string) {
 
 export function KanbanCard({ lead, borderColor }: KanbanCardProps) {
   const [transferring, setTransferring] = useState(false)
+  const [deleting, setDeleting] = useState(false)
   const isDraggable = lead.status !== 'TRANSFERIDOS'
 
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
@@ -47,6 +62,17 @@ export function KanbanCard({ lead, borderColor }: KanbanCardProps) {
       // erro tratado via Realtime — card não se move se API falhar
     } finally {
       setTransferring(false)
+    }
+  }
+
+  async function handleDelete() {
+    setDeleting(true)
+    try {
+      await deleteLead(lead.telefone)
+    } catch {
+      // Realtime remove o card automaticamente
+    } finally {
+      setDeleting(false)
     }
   }
 
@@ -92,7 +118,7 @@ export function KanbanCard({ lead, borderColor }: KanbanCardProps) {
               Ver dados
             </button>
           </DialogTrigger>
-          <DialogContent className="max-w-sm">
+          <DialogContent showCloseButton={false} className="max-w-sm">
             <DialogHeader>
               <DialogTitle>{lead.empresa}</DialogTitle>
             </DialogHeader>
@@ -140,6 +166,41 @@ export function KanbanCard({ lead, borderColor }: KanbanCardProps) {
                 <span className="text-gray-800">{lead.qtd_reengajamentos}</span>
               </>}
             </div>
+            <DialogFooter className="flex-row gap-2 justify-between">
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <button
+                    disabled={deleting}
+                    className="text-xs text-red-600 border border-red-200 rounded px-3 py-1.5 hover:bg-red-50 disabled:opacity-50 transition-colors"
+                  >
+                    {deleting ? 'Excluindo...' : 'Excluir lead'}
+                  </button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Excluir {lead.empresa}?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Este lead será removido permanentemente do CRM. Esta ação não pode ser desfeita.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={handleDelete}
+                      className="bg-red-600 hover:bg-red-700 text-white"
+                    >
+                      Excluir
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+
+              <DialogClose asChild>
+                <button className="text-xs bg-gray-100 text-gray-700 rounded px-3 py-1.5 hover:bg-gray-200 transition-colors">
+                  Fechar
+                </button>
+              </DialogClose>
+            </DialogFooter>
           </DialogContent>
         </Dialog>
 

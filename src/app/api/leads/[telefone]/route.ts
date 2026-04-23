@@ -9,6 +9,30 @@ const VALID_STATUSES: LeadStatus[] = [
   'LOCALIZADOS', 'PROSPECTAR', 'PROSPECTADOS', 'INTERESSE', 'TRANSFERIDOS', 'DESCARTADOS', 'NAO_RESPONDERAM',
 ]
 
+export async function DELETE(
+  _request: NextRequest,
+  { params }: { params: Promise<{ telefone: string }> }
+) {
+  const { telefone } = await params
+
+  const supabase = await createClient()
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  if (authError || !user) {
+    return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+  }
+
+  const { error } = await supabase
+    .from('leads')
+    .delete()
+    .eq('telefone', telefone)
+
+  if (error) {
+    return NextResponse.json({ error: 'Erro ao excluir lead' }, { status: 500 })
+  }
+
+  return NextResponse.json({ ok: true })
+}
+
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ telefone: string }> }

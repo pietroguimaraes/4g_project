@@ -26,6 +26,16 @@ export async function updateLeadStatus(
   return response.json()
 }
 
+export async function deleteLead(telefone: string): Promise<void> {
+  const response = await fetch(`/api/leads/${encodeURIComponent(telefone)}`, {
+    method: 'DELETE',
+  })
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(error.error || 'Erro ao excluir lead')
+  }
+}
+
 export async function bulkApproveLeads(): Promise<{ updated: number }> {
   const response = await fetch('/api/leads/bulk-approve', {
     method: 'PATCH',

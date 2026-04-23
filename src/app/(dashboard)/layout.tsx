@@ -24,6 +24,12 @@ export default function DashboardLayout({
             >
               Kanban
             </Link>
+            <Link
+              href="/manual"
+              className="text-sm text-gray-600 hover:text-gray-900 font-medium transition-colors"
+            >
+              Manual
+            </Link>
           </div>
         </div>
         <LogoutButton />
