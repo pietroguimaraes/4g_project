@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Body inválido' }, { status: 400 })
   }
 
-  const { empresa, telefone, website, cidade, estado, pais, search_id, status } = body as Record<string, unknown>
+  const { empresa, telefone, website, cidade, estado, pais, search_id, status, manual } = body as Record<string, unknown>
 
   if (!empresa || !telefone) {
     return NextResponse.json({ error: 'Campos obrigatórios: empresa, telefone' }, { status: 400 })
@@ -56,14 +56,27 @@ export async function POST(request: NextRequest) {
         pais: pais ? String(pais) : null,
         search_id: search_id ? String(search_id) : null,
         status: leadStatus,
+        manual: manual === true,
       },
       { onConflict: 'telefone', ignoreDuplicates: true }
     )
-    .select('id, empresa, telefone, status')
+    .select('id, empresa, telefone, status, manual')
     .single()
 
   if (dbError) {
     return NextResponse.json({ error: 'Erro ao salvar lead' }, { status: 500 })
+  }
+
+  // Dispara webhook do n8n quando lead é criado diretamente em PROSPECTADOS
+  if (leadStatus === 'PROSPECTADOS') {
+    const prospectuarUrl = process.env.N8N_PROSPECTAR_URL
+    if (prospectuarUrl) {
+      fetch(prospectuarUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ telefone: String(telefone), empresa: String(empresa) }),
+      }).catch(() => {})
+    }
   }
 
   return NextResponse.json(data, { status: 201 })

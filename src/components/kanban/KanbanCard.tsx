@@ -62,13 +62,18 @@ export function KanbanCard({ lead, borderColor }: KanbanCardProps) {
       {lead.cidade && <p className="text-gray-400 text-xs">{lead.cidade}</p>}
 
       <div className="flex items-center justify-between mt-2">
-        {badge ? (
-          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${badge.color}`}>
-            {badge.label}
-          </span>
-        ) : (
-          <span />
-        )}
+        <div className="flex items-center gap-1">
+          {badge && (
+            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${badge.color}`}>
+              {badge.label}
+            </span>
+          )}
+          {lead.manual && (
+            <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-purple-100 text-purple-700">
+              Manual
+            </span>
+          )}
+        </div>
         <span className="text-xs text-gray-400">
           {lead.nota != null ? `★ ${lead.nota}/10` : 'Sem nota'}
         </span>

@@ -27,6 +27,7 @@ export interface Lead {
   data_followup?: string
   qtd_reengajamentos: number
   search_id?: string
+  manual: boolean
   created_at: string
   updated_at: string
 }

@@ -50,7 +50,7 @@ export function AddCompanyForm({ onSuccess }: AddCompanyFormProps) {
       const response = await fetch('/api/leads', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ empresa: empresa.trim(), telefone: sanitized, status: 'PROSPECTAR' }),
+        body: JSON.stringify({ empresa: empresa.trim(), telefone: sanitized, status: 'PROSPECTADOS', manual: true }),
       })
 
       if (!response.ok) {
