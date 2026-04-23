@@ -70,11 +70,15 @@ export function useKanban() {
               }
             })
           } else if (payload.eventType === 'DELETE') {
-            const deleted = payload.old as { id: string; status: LeadStatus }
-            setKanban((prev) => ({
-              ...prev,
-              [deleted.status]: prev[deleted.status].filter((l) => l.id !== deleted.id),
-            }))
+            const deletedId = (payload.old as { id: string }).id
+            // Realtime não envia status no DELETE — busca em todas as colunas
+            setKanban((prev) => {
+              const next = { ...prev }
+              for (const status of Object.keys(next) as LeadStatus[]) {
+                next[status] = next[status].filter((l) => l.id !== deletedId)
+              }
+              return next
+            })
           }
         }
       )

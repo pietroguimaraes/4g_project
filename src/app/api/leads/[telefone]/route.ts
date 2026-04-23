@@ -140,11 +140,15 @@ export async function PATCH(
   if (status === 'PROSPECTADOS') {
     const prospectuarUrl = process.env.N8N_PROSPECTAR_URL
     if (prospectuarUrl) {
-      fetch(prospectuarUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ telefone: data.telefone, empresa: data.empresa }),
-      }).catch(() => {})
+      try {
+        await fetch(prospectuarUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ telefone: data.telefone, empresa: data.empresa }),
+        })
+      } catch {
+        // Webhook falhou mas status já foi atualizado — segue em frente
+      }
     }
   }
 

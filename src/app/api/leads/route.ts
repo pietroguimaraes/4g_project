@@ -71,11 +71,15 @@ export async function POST(request: NextRequest) {
   if (leadStatus === 'PROSPECTADOS') {
     const prospectuarUrl = process.env.N8N_PROSPECTAR_URL
     if (prospectuarUrl) {
-      fetch(prospectuarUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ telefone: String(telefone), empresa: String(empresa) }),
-      }).catch(() => {})
+      try {
+        await fetch(prospectuarUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ telefone: String(telefone), empresa: String(empresa) }),
+        })
+      } catch {
+        // Webhook falhou mas lead já foi salvo — segue em frente
+      }
     }
   }
 
