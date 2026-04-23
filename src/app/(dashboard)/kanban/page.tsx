@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { DndContext, DragEndEvent } from '@dnd-kit/core'
+import { DndContext, DragEndEvent, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
 import { useKanban } from '@/hooks/useKanban'
 import { KanbanColumn } from '@/components/kanban/KanbanColumn'
 import { updateLeadStatus } from '@/lib/api/leads'
@@ -19,6 +19,10 @@ export default function KanbanPage() {
   const { kanban, loading } = useKanban()
   const [localKanban, setLocalKanban] = useState<typeof kanban | null>(null)
   const [erro, setErro] = useState<string | null>(null)
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
+  )
 
   const displayKanban = localKanban ?? kanban
 
@@ -70,7 +74,7 @@ export default function KanbanPage() {
     <div>
       <h1 className="text-2xl font-bold mb-6">Kanban de Funil</h1>
       {erro && <p className="text-red-600 text-sm mb-4">{erro}</p>}
-      <DndContext onDragEnd={handleDragEnd}>
+      <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
           {COLUNAS.map((col) => (
             <KanbanColumn
