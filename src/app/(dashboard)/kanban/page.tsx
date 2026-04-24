@@ -26,6 +26,17 @@ export default function KanbanPage() {
 
   const displayKanban = localKanban ?? kanban
 
+  function handleLeadDeleted(id: string) {
+    setLocalKanban((prev) => {
+      const base = prev ?? kanban
+      const next = { ...base }
+      for (const status of Object.keys(next) as LeadStatus[]) {
+        next[status] = next[status].filter((l) => l.id !== id)
+      }
+      return next
+    })
+  }
+
   async function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event
     if (!over || active.id === over.id) return
@@ -84,6 +95,7 @@ export default function KanbanPage() {
               leads={displayKanban[col.status]}
               headerColor={col.headerColor}
               borderColor={col.borderColor}
+              onLeadDeleted={handleLeadDeleted}
             />
           ))}
         </div>
