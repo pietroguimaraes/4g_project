@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { DndContext, DragEndEvent, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
 import { useKanban } from '@/hooks/useKanban'
 import { KanbanColumn } from '@/components/kanban/KanbanColumn'
@@ -18,21 +18,27 @@ const COLUNAS = [
 export default function KanbanPage() {
   const { kanban, loading } = useKanban()
   const [localKanban, setLocalKanban] = useState<typeof kanban | null>(null)
+  const [deletedIds, setDeletedIds] = useState<Set<string>>(new Set())
   const [erro, setErro] = useState<string | null>(null)
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
   )
 
-  const displayKanban = localKanban ?? kanban
+  const displayKanban = useMemo(() => {
+    const base = localKanban ?? kanban
+    if (deletedIds.size === 0) return base
+    const next = { ...base }
+    for (const status of Object.keys(next) as LeadStatus[]) {
+      next[status] = next[status].filter((l) => !deletedIds.has(l.id))
+    }
+    return next
+  }, [localKanban, kanban, deletedIds])
 
   function handleLeadDeleted(id: string) {
-    setLocalKanban((prev) => {
-      const base = prev ?? kanban
-      const next = { ...base }
-      for (const status of Object.keys(next) as LeadStatus[]) {
-        next[status] = next[status].filter((l) => l.id !== id)
-      }
+    setDeletedIds((prev) => {
+      const next = new Set(prev)
+      next.add(id)
       return next
     })
   }
