@@ -4,13 +4,11 @@ import { useState, useEffect } from 'react'
 import { createSearch } from '@/lib/api/searches'
 
 const TIPOS_LOJA = [
-  'Todos os tipos',
-  'Loja de brinquedos',
-  'Artigos esportivos',
-  'Bazar e variedades',
-  'Sacoleiro / Atacadista',
-  'Loja de presentes',
-  'Comércio',
+  'Lojas de Variedades/1,99/miudezas/bazares',
+  'Lojas de brinquedos',
+  'Lojas de artigos esportivos',
+  'Papelaria',
+  'Eletroportáteis/eletrônicos',
 ]
 
 const ESTADOS = [
