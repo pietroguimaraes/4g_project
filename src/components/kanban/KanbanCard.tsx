@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useDraggable } from '@dnd-kit/core'
-import { updateLeadStatus } from '@/lib/api/leads'
+import { updateLeadStatus, deleteLead } from '@/lib/api/leads'
 import type { Lead, LeadCategoria } from '@/types'
 import {
   Dialog,
@@ -24,11 +24,11 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
-import { deleteLead } from '@/lib/api/leads'
 
 interface KanbanCardProps {
   lead: Lead
   borderColor: string
+  onDeleted: (id: string) => void
 }
 
 const CATEGORIA_BADGE: Record<LeadCategoria, { label: string; color: string }> = {
@@ -41,7 +41,7 @@ function formatDate(dateStr: string) {
   return new Date(dateStr).toLocaleDateString('pt-BR')
 }
 
-export function KanbanCard({ lead, borderColor }: KanbanCardProps) {
+export function KanbanCard({ lead, borderColor, onDeleted }: KanbanCardProps) {
   const [transferring, setTransferring] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const isDraggable = lead.status !== 'TRANSFERIDOS'
@@ -59,7 +59,7 @@ export function KanbanCard({ lead, borderColor }: KanbanCardProps) {
     try {
       await updateLeadStatus(lead.telefone, 'TRANSFERIDOS')
     } catch {
-      // erro tratado via Realtime — card não se move se API falhar
+      // erro tratado via Realtime
     } finally {
       setTransferring(false)
     }
@@ -69,9 +69,8 @@ export function KanbanCard({ lead, borderColor }: KanbanCardProps) {
     setDeleting(true)
     try {
       await deleteLead(lead.telefone)
+      onDeleted(lead.id)
     } catch {
-      // Realtime remove o card automaticamente
-    } finally {
       setDeleting(false)
     }
   }
@@ -84,28 +83,11 @@ export function KanbanCard({ lead, borderColor }: KanbanCardProps) {
       className={`bg-white rounded-lg border border-gray-200 border-l-4 ${borderColor} p-3 shadow-sm ${isDraggable ? 'cursor-grab active:cursor-grabbing' : ''} select-none`}
     >
       <p className="font-semibold text-gray-900 text-sm truncate">{lead.empresa}</p>
-      <p className="text-gray-500 text-xs mt-1">{lead.telefone}</p>
-      {lead.cidade && <p className="text-gray-400 text-xs">{lead.cidade}</p>}
-
-      <div className="flex items-center justify-between mt-2">
-        <div className="flex items-center gap-1">
-          {badge && (
-            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${badge.color}`}>
-              {badge.label}
-            </span>
-          )}
-          {lead.manual && (
-            <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-purple-100 text-purple-700">
-              Manual
-            </span>
-          )}
-        </div>
-        <span className="text-xs text-gray-400">
-          {lead.nota != null ? `★ ${lead.nota}/10` : 'Sem nota'}
+      {lead.manual && (
+        <span className="inline-block mt-1 text-xs px-2 py-0.5 rounded-full font-medium bg-purple-100 text-purple-700">
+          Manual
         </span>
-      </div>
-
-      <p className="text-gray-300 text-xs mt-1">{formatDate(lead.data_coleta)}</p>
+      )}
 
       <div className="mt-2 flex gap-1">
         <Dialog>
@@ -145,7 +127,7 @@ export function KanbanCard({ lead, borderColor }: KanbanCardProps) {
               <span className="text-gray-800">{lead.status}</span>
               {lead.categoria && <>
                 <span className="text-gray-500">Categoria</span>
-                <span className="text-gray-800">{lead.categoria}</span>
+                <span className="text-gray-800">{badge?.label ?? lead.categoria}</span>
               </>}
               {lead.nota != null && <>
                 <span className="text-gray-500">Nota</span>
