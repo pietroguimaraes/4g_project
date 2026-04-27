@@ -6,6 +6,7 @@ export type LeadStatus =
   | 'TRANSFERIDOS'
   | 'DESCARTADOS'
   | 'NAO_RESPONDERAM'
+  | 'RESERVA'
 
 export type LeadCategoria = 'DOMÉSTICOS' | 'ESPORTIVOS' | 'MISTO'
 
@@ -27,6 +28,7 @@ export interface Lead {
   data_followup?: string
   qtd_reengajamentos: number
   search_id?: string
+  tipo_loja?: string
   manual: boolean
   created_at: string
   updated_at: string

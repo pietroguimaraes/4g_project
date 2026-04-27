@@ -4,7 +4,7 @@ import { createClient as createServiceClient } from '@supabase/supabase-js'
 import type { LeadStatus } from '@/types'
 
 const VALID_STATUSES: LeadStatus[] = [
-  'LOCALIZADOS', 'PROSPECTAR', 'PROSPECTADOS', 'INTERESSE', 'TRANSFERIDOS', 'DESCARTADOS', 'NAO_RESPONDERAM',
+  'LOCALIZADOS', 'PROSPECTAR', 'PROSPECTADOS', 'INTERESSE', 'TRANSFERIDOS', 'DESCARTADOS', 'NAO_RESPONDERAM', 'RESERVA',
 ]
 
 export async function POST(request: NextRequest) {
@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Body inválido' }, { status: 400 })
   }
 
-  const { empresa, telefone, website, cidade, estado, pais, search_id, status, manual } = body as Record<string, unknown>
+  const { empresa, telefone, website, cidade, estado, pais, search_id, status, manual, tipo_loja } = body as Record<string, unknown>
 
   if (!empresa || !telefone) {
     return NextResponse.json({ error: 'Campos obrigatórios: empresa, telefone' }, { status: 400 })
@@ -56,6 +56,7 @@ export async function POST(request: NextRequest) {
         pais: pais ? String(pais) : null,
         search_id: search_id ? String(search_id) : null,
         status: leadStatus,
+        tipo_loja: tipo_loja ? String(tipo_loja) : null,
         manual: manual === true,
       },
       { onConflict: 'telefone', ignoreDuplicates: true }
@@ -108,6 +109,8 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
   const status = searchParams.get('status')
   const statuses = searchParams.get('statuses')
+  const cidadeFilter = searchParams.get('cidade')
+  const tipoLojaFilter = searchParams.get('tipo_loja')
 
   let query = supabase.from('leads').select('*').order('created_at', { ascending: false }).limit(500)
   if (statuses) {
@@ -115,6 +118,8 @@ export async function GET(request: NextRequest) {
   } else if (status) {
     query = query.eq('status', status)
   }
+  if (cidadeFilter) query = query.ilike('cidade', cidadeFilter)
+  if (tipoLojaFilter) query = query.eq('tipo_loja', tipoLojaFilter)
 
   const { data, error } = await query
   if (error) {
