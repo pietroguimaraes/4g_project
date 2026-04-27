@@ -1,7 +1,8 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { createSearch } from '@/lib/api/searches'
+import type { Search } from '@/types'
 
 const TIPOS_LOJA = [
   'Lojas de Variedades/1,99/miudezas/bazares',
@@ -49,7 +50,13 @@ export function SearchForm() {
   const [quantidade, setQuantidade] = useState('')
   const [tipoLoja, setTipoLoja] = useState('')
   const [loading, setLoading] = useState(false)
-  const [feedback, setFeedback] = useState<{ tipo: 'erro' | 'sucesso'; mensagem: string } | null>(null)
+  const [feedback, setFeedback] = useState<{ tipo: 'erro' | 'sucesso' | 'progresso'; mensagem: string } | null>(null)
+  const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const activeSearchRef = useRef<{ id: string; quantidade: number } | null>(null)
+
+  useEffect(() => {
+    return () => stopPolling()
+  }, [])
 
   useEffect(() => {
     if (!estado) {
@@ -65,6 +72,60 @@ export function SearchForm() {
       .catch(() => setCidades([]))
       .finally(() => setLoadingCidades(false))
   }, [estado])
+
+  function stopPolling() {
+    if (pollingRef.current) {
+      clearInterval(pollingRef.current)
+      pollingRef.current = null
+    }
+  }
+
+  function startPolling(searchId: string, quantidadePedida: number) {
+    activeSearchRef.current = { id: searchId, quantidade: quantidadePedida }
+    const startedAt = Date.now()
+    const MAX_POLL_MS = 10 * 60 * 1000 // 10 minutos
+
+    pollingRef.current = setInterval(async () => {
+      if (Date.now() - startedAt > MAX_POLL_MS) {
+        stopPolling()
+        setFeedback({ tipo: 'erro', mensagem: 'A busca está demorando muito. Verifique o n8n.' })
+        setLoading(false)
+        return
+      }
+
+      try {
+        const res = await fetch(`/api/searches/${searchId}`)
+        if (!res.ok) return
+        const search: Search = await res.json()
+
+        if (search.status === 'CONCLUÍDA') {
+          stopPolling()
+          setLoading(false)
+          const entregues = search.quantidade_entregue ?? 0
+          const rodadas = search.num_rodadas ?? 1
+          const sufixoRodadas = rodadas > 1 ? ` (${rodadas} rodadas de busca)` : ''
+          if (entregues >= quantidadePedida) {
+            setFeedback({
+              tipo: 'sucesso',
+              mensagem: `Busca concluída! ${entregues} de ${quantidadePedida} empresas encontradas${sufixoRodadas}.`,
+            })
+          } else {
+            setFeedback({
+              tipo: 'sucesso',
+              mensagem: `Busca concluída: ${entregues} de ${quantidadePedida} empresas encontradas${sufixoRodadas}. Essa cidade pode não ter mais lojas desse tipo disponíveis no Google Maps.`,
+            })
+          }
+        } else if (search.status === 'ERRO') {
+          stopPolling()
+          setLoading(false)
+          setFeedback({ tipo: 'erro', mensagem: 'Erro na busca. Verifique o n8n e tente novamente.' })
+        }
+        // PENDENTE: continua polling
+      } catch {
+        // erro de rede temporário — continua polling
+      }
+    }, 3000)
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -88,22 +149,22 @@ export function SearchForm() {
       return
     }
 
+    stopPolling()
     setLoading(true)
     try {
-      await createSearch({ pais: 'Brasil', estado, cidade, quantidade: qty, tipo_loja: tipoLoja })
-      const estadoNome = ESTADOS.find(e => e.uf === estado)?.nome ?? estado
+      const result = await createSearch({ pais: 'Brasil', estado, cidade, quantidade: qty, tipo_loja: tipoLoja })
       setFeedback({
-        tipo: 'sucesso',
-        mensagem: `Busca disparada com sucesso! O n8n vai procurar ${qty} empresa${qty > 1 ? 's' : ''} do tipo "${tipoLoja}" em ${cidade}, ${estadoNome}.`,
+        tipo: 'progresso',
+        mensagem: `⏳ Buscando ${qty} empresa${qty > 1 ? 's' : ''} do tipo "${tipoLoja}" em ${cidade}... Isso pode levar alguns minutos.`,
       })
       setEstado('')
       setCidade('')
       setQuantidade('')
       setTipoLoja('')
+      startPolling(result.id, qty)
     } catch (err) {
       const motivo = err instanceof Error ? err.message : 'Erro desconhecido.'
       setFeedback({ tipo: 'erro', mensagem: `Não foi possível iniciar a busca. Motivo: ${motivo}` })
-    } finally {
       setLoading(false)
     }
   }
@@ -179,9 +240,11 @@ export function SearchForm() {
         <div className={`mt-4 p-3 rounded-md text-sm ${
           feedback.tipo === 'sucesso'
             ? 'bg-green-50 text-green-700 border border-green-200'
+            : feedback.tipo === 'progresso'
+            ? 'bg-blue-50 text-blue-700 border border-blue-200'
             : 'bg-red-50 text-red-700 border border-red-200'
         }`}>
-          {feedback.tipo === 'sucesso' ? '✅ ' : '❌ '}{feedback.mensagem}
+          {feedback.mensagem}
         </div>
       )}
 

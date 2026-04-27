@@ -41,5 +41,8 @@ export interface Search {
   quantidade: number
   status: SearchStatus
   total_encontrados?: number
+  quantidade_bruta?: number
+  quantidade_entregue?: number
+  num_rodadas?: number
   created_at: string
 }
