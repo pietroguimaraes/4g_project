@@ -64,8 +64,14 @@ export async function POST(request: NextRequest) {
     .select('id, empresa, telefone, status, manual')
     .single()
 
-  if (dbError) {
+  // PGRST116 = nenhuma linha retornada (lead duplicado ignorado por ignoreDuplicates:true)
+  if (dbError && dbError.code !== 'PGRST116') {
     return NextResponse.json({ error: 'Erro ao salvar lead' }, { status: 500 })
+  }
+
+  if (!data) {
+    // Lead já existe com esse telefone — retorna ok sem re-inserir
+    return NextResponse.json({ skipped: true, reason: 'duplicate' }, { status: 200 })
   }
 
   // Dispara webhook do n8n quando lead é criado diretamente em PROSPECTADOS
