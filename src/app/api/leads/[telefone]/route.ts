@@ -6,7 +6,7 @@ import type { LeadStatus, LeadCategoria } from '@/types'
 const VALID_CATEGORIAS: LeadCategoria[] = ['DOMÉSTICOS', 'ESPORTIVOS', 'MISTO']
 
 const VALID_STATUSES: LeadStatus[] = [
-  'LOCALIZADOS', 'PROSPECTAR', 'PROSPECTADOS', 'INTERESSE', 'TRANSFERIDOS', 'DESCARTADOS', 'NAO_RESPONDERAM',
+  'LOCALIZADOS', 'PROSPECTAR', 'PROSPECTADOS', 'INTERESSE', 'TRANSFERIDOS', 'DESCARTADOS', 'NAO_RESPONDERAM', 'PEQUENOS',
 ]
 
 export async function DELETE(
@@ -71,7 +71,7 @@ export async function PATCH(
     return NextResponse.json({ error: 'Body inválido' }, { status: 400 })
   }
 
-  const { status, categoria, nota, data_resposta, data_followup, qtd_reengajamentos } = body as Record<string, unknown>
+  const { status, categoria, nota, data_resposta, data_followup, qtd_reengajamentos, pequeno } = body as Record<string, unknown>
 
   if (!status || !VALID_STATUSES.includes(status as LeadStatus)) {
     return NextResponse.json(
@@ -145,6 +145,27 @@ export async function PATCH(
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ telefone: data.telefone, empresa: data.empresa }),
+        })
+      } catch {
+        // Webhook falhou mas status já foi atualizado — segue em frente
+      }
+    }
+  }
+
+  // Dispara webhook do n8n quando lead é transferido para Anderson
+  // pequeno=true → mensagem diferente indicando cliente pequeno (< R$3k)
+  if (status === 'TRANSFERIDOS') {
+    const transferirUrl = process.env.N8N_TRANSFERIR_URL
+    if (transferirUrl) {
+      try {
+        await fetch(transferirUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            telefone: data.telefone,
+            empresa: data.empresa,
+            pequeno: pequeno === true,
+          }),
         })
       } catch {
         // Webhook falhou mas status já foi atualizado — segue em frente

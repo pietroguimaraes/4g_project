@@ -7,7 +7,7 @@ import { KanbanColumn } from '@/components/kanban/KanbanColumn'
 import { updateLeadStatus } from '@/lib/api/leads'
 import type { Lead, LeadStatus } from '@/types'
 
-const COLUNAS = [
+const COLUNAS_FUNIL = [
   { status: 'PROSPECTADOS' as const, titulo: 'Prospectados', headerColor: 'border-blue-400', borderColor: 'border-l-blue-400' },
   { status: 'NAO_RESPONDERAM' as const, titulo: 'Não Responderam', headerColor: 'border-yellow-400', borderColor: 'border-l-yellow-400' },
   { status: 'INTERESSE' as const, titulo: 'Interesse', headerColor: 'border-orange-400', borderColor: 'border-l-orange-400' },
@@ -15,8 +15,16 @@ const COLUNAS = [
   { status: 'DESCARTADOS' as const, titulo: 'Descartados', headerColor: 'border-gray-400', borderColor: 'border-l-gray-400' },
 ]
 
+const COLUNAS_PEQUENOS = [
+  { status: 'PEQUENOS' as const, titulo: 'Clientes Pequenos', headerColor: 'border-purple-400', borderColor: 'border-l-purple-400' },
+  { status: 'TRANSFERIDOS' as const, titulo: 'Transferidos', headerColor: 'border-green-400', borderColor: 'border-l-green-400' },
+]
+
+type Aba = 'funil' | 'pequenos'
+
 export default function KanbanPage() {
   const { kanban, loading } = useKanban()
+  const [aba, setAba] = useState<Aba>('funil')
   const [localKanban, setLocalKanban] = useState<typeof kanban | null>(null)
   const [deletedIds, setDeletedIds] = useState<Set<string>>(new Set())
   const [erro, setErro] = useState<string | null>(null)
@@ -55,7 +63,6 @@ export default function KanbanPage() {
     const oldStatus = lead.status
     if (oldStatus === newStatus) return
 
-    // Optimistic update
     setLocalKanban((prev) => {
       const base = prev ?? kanban
       const fromList = base[oldStatus].filter((l) => l.telefone !== telefone)
@@ -67,7 +74,6 @@ export default function KanbanPage() {
       await updateLeadStatus(telefone, newStatus)
       setErro(null)
     } catch {
-      // Reverter
       setLocalKanban((prev) => {
         const base = prev ?? kanban
         const fromList = base[newStatus].filter((l) => l.telefone !== telefone)
@@ -87,21 +93,56 @@ export default function KanbanPage() {
     )
   }
 
+  const colunas = aba === 'funil' ? COLUNAS_FUNIL : COLUNAS_PEQUENOS
+  const gridCols = aba === 'funil' ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-5' : 'grid-cols-1 md:grid-cols-2'
+
   return (
     <div>
-      <h1 className="text-2xl font-bold mb-6">Kanban de Funil</h1>
+      <h1 className="text-2xl font-bold mb-4">Kanban de Funil</h1>
+
+      {/* Abas */}
+      <div className="flex gap-2 mb-6 border-b border-gray-200">
+        <button
+          onClick={() => setAba('funil')}
+          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+            aba === 'funil'
+              ? 'border-blue-500 text-blue-600'
+              : 'border-transparent text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          Funil Principal
+        </button>
+        <button
+          onClick={() => setAba('pequenos')}
+          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors flex items-center gap-2 ${
+            aba === 'pequenos'
+              ? 'border-purple-500 text-purple-600'
+              : 'border-transparent text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          Clientes Pequenos
+          {displayKanban['PEQUENOS'].length > 0 && (
+            <span className="bg-purple-100 text-purple-700 text-xs font-semibold px-1.5 py-0.5 rounded-full">
+              {displayKanban['PEQUENOS'].length}
+            </span>
+          )}
+        </button>
+      </div>
+
       {erro && <p className="text-red-600 text-sm mb-4">{erro}</p>}
+
       <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-          {COLUNAS.map((col) => (
+        <div className={`grid ${gridCols} gap-4`}>
+          {colunas.map((col) => (
             <KanbanColumn
-              key={col.status}
+              key={col.status + aba}
               status={col.status}
               title={col.titulo}
               leads={displayKanban[col.status]}
               headerColor={col.headerColor}
               borderColor={col.borderColor}
               onLeadDeleted={handleLeadDeleted}
+              isPequenos={aba === 'pequenos' && col.status === 'PEQUENOS'}
             />
           ))}
         </div>

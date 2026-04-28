@@ -29,6 +29,7 @@ interface KanbanCardProps {
   lead: Lead
   borderColor: string
   onDeleted: (id: string) => void
+  isPequenos?: boolean
 }
 
 const CATEGORIA_BADGE: Record<LeadCategoria, { label: string; color: string }> = {
@@ -41,7 +42,7 @@ function formatDate(dateStr: string) {
   return new Date(dateStr).toLocaleDateString('pt-BR')
 }
 
-export function KanbanCard({ lead, borderColor, onDeleted }: KanbanCardProps) {
+export function KanbanCard({ lead, borderColor, onDeleted, isPequenos }: KanbanCardProps) {
   const [transferring, setTransferring] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const isDraggable = lead.status !== 'TRANSFERIDOS'
@@ -54,10 +55,15 @@ export function KanbanCard({ lead, borderColor, onDeleted }: KanbanCardProps) {
 
   const badge = lead.categoria ? CATEGORIA_BADGE[lead.categoria] : null
 
-  async function handleTransfer() {
+  async function handleTransfer(pequeno = false) {
     setTransferring(true)
     try {
-      await updateLeadStatus(lead.telefone, 'TRANSFERIDOS')
+      const response = await fetch(`/api/leads/${encodeURIComponent(lead.telefone)}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'TRANSFERIDOS', pequeno }),
+      })
+      if (!response.ok) throw new Error()
     } catch {
       // erro tratado via Realtime
     } finally {
@@ -189,9 +195,20 @@ export function KanbanCard({ lead, borderColor, onDeleted }: KanbanCardProps) {
         {lead.status === 'INTERESSE' && (
           <button
             onPointerDown={(e) => e.stopPropagation()}
-            onClick={(e) => { e.stopPropagation(); handleTransfer() }}
+            onClick={(e) => { e.stopPropagation(); handleTransfer(false) }}
             disabled={transferring}
             className="flex-1 text-xs bg-green-600 text-white rounded px-2 py-1 hover:bg-green-700 disabled:opacity-50 transition-colors"
+          >
+            {transferring ? 'Transferindo...' : 'Transferir'}
+          </button>
+        )}
+
+        {isPequenos && lead.status === 'PEQUENOS' && (
+          <button
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={(e) => { e.stopPropagation(); handleTransfer(true) }}
+            disabled={transferring}
+            className="flex-1 text-xs bg-purple-600 text-white rounded px-2 py-1 hover:bg-purple-700 disabled:opacity-50 transition-colors"
           >
             {transferring ? 'Transferindo...' : 'Transferir'}
           </button>

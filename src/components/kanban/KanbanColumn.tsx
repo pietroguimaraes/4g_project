@@ -11,9 +11,10 @@ interface KanbanColumnProps {
   borderColor: string
   headerColor: string
   onLeadDeleted: (id: string) => void
+  isPequenos?: boolean
 }
 
-export function KanbanColumn({ status, title, leads, borderColor, headerColor, onLeadDeleted }: KanbanColumnProps) {
+export function KanbanColumn({ status, title, leads, borderColor, headerColor, onLeadDeleted, isPequenos }: KanbanColumnProps) {
   const { setNodeRef, isOver } = useDroppable({ id: status })
 
   return (
@@ -32,7 +33,7 @@ export function KanbanColumn({ status, title, leads, borderColor, headerColor, o
           <p className="text-gray-400 text-xs">Nenhum lead nesta etapa.</p>
         ) : (
           leads.map((lead) => (
-            <KanbanCard key={lead.id} lead={lead} borderColor={borderColor} onDeleted={onLeadDeleted} />
+            <KanbanCard key={lead.id} lead={lead} borderColor={borderColor} onDeleted={onLeadDeleted} isPequenos={isPequenos} />
           ))
         )}
       </div>
