@@ -17,6 +17,7 @@ function emptyMap(): KanbanMap {
     INTERESSE: [],
     TRANSFERIDOS: [],
     DESCARTADOS: [],
+    RESERVA: [],
   }
 }
 
