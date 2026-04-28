@@ -15,11 +15,13 @@ const patchNode = d.nodes.find(n => n.name === 'patch_busca_concluida');
 
 // =============================================================
 // 1. NOVO NÓ: verificar_reserva (HTTP Request GET)
+// Usa /api/leads/reserve-count que SEMPRE retorna 1 item JSON (nunca array)
+// Isso evita o n8n parar o fluxo quando a reserva está vazia
 // =============================================================
 const verificarReservaNode = {
   parameters: {
     method: 'GET',
-    url: "={{ '" + API_BASE + "/api/leads?status=RESERVA&cidade=' + encodeURIComponent($('receber_busca_dashboard').first().json.body.cidade) + '&tipo_loja=' + encodeURIComponent($('receber_busca_dashboard').first().json.body.tipo_loja) }}",
+    url: "={{ '" + API_BASE + "/api/leads/reserve-count?cidade=' + encodeURIComponent($('receber_busca_dashboard').first().json.body.cidade) + '&tipo_loja=' + encodeURIComponent($('receber_busca_dashboard').first().json.body.tipo_loja) }}",
     sendHeaders: true,
     headerParameters: {
       parameters: [{ name: 'x-api-key', value: apiKey }]
@@ -40,21 +42,9 @@ console.log('✓ verificar_reserva: nó adicionado');
 // 2. NOVO NÓ: calcular_estrategia (Code)
 // =============================================================
 const calcularCode = [
-  "// Reserva: array de leads em RESERVA para esta cidade+tipo_loja",
-  "const reservaRaw = $input.all();",
-  "// HTTP Request retorna um item com body contendo o array, ou array direto",
-  "let reservaLeads = [];",
-  "if (reservaRaw.length === 1 && Array.isArray(reservaRaw[0].json)) {",
-  "  reservaLeads = reservaRaw[0].json;",
-  "} else if (reservaRaw.length > 0 && reservaRaw[0].json && !reservaRaw[0].json.empresa) {",
-  "  // Resposta é array encapsulado — tentar extrair",
-  "  const first = reservaRaw[0].json;",
-  "  reservaLeads = Array.isArray(first) ? first : reservaRaw.map(i => i.json);",
-  "} else {",
-  "  reservaLeads = reservaRaw.map(i => i.json).filter(j => j && j.telefone);",
-  "}",
-  "",
-  "const reservaCount = reservaLeads.length;",
+  "// reserve-count sempre retorna 1 item: { count: N, leads: [...] }",
+  "const resposta = $input.first().json;",
+  "const reservaCount = resposta.count || 0;",
   "const bodyOriginal = $('receber_busca_dashboard').first().json.body || {};",
   "const quantidadePedida = parseInt(bodyOriginal.quantidade) || 30;",
   "",
