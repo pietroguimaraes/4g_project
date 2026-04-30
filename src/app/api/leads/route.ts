@@ -4,7 +4,7 @@ import { createClient as createServiceClient } from '@supabase/supabase-js'
 import type { LeadStatus } from '@/types'
 
 const VALID_STATUSES: LeadStatus[] = [
-  'LOCALIZADOS', 'PROSPECTAR', 'PROSPECTADOS', 'INTERESSE', 'TRANSFERIDOS', 'DESCARTADOS', 'NAO_RESPONDERAM', 'RESERVA',
+  'LOCALIZADOS', 'PROSPECTAR', 'PROSPECTADOS', 'INTERESSE', 'TRANSFERIDOS', 'DESCARTADOS', 'NAO_RESPONDERAM', 'RESERVA', 'PEQUENOS',
 ]
 
 export async function POST(request: NextRequest) {
