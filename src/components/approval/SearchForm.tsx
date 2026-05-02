@@ -9,7 +9,6 @@ const TIPOS_LOJA = [
   'Lojas de brinquedos',
   'Lojas de artigos esportivos',
   'Papelaria',
-  'Eletroportáteis/eletrônicos',
 ]
 
 const ESTADOS = [
