@@ -139,7 +139,7 @@ const apifyNode = d.nodes.find(n => n.name === 'Run an Actor and get dataset1');
 
 apifyNode.parameters.actorId = {
   __rl: true,
-  value: 'jungle_synthesizer/brazil-cnpj-receita-federal-crawler',
+  value: 'jungle_synthesizer~brazil-cnpj-receita-federal-crawler',
   mode: 'id',
   cachedResultName: 'Brazil CNPJ Receita Federal Scraper',
   cachedResultUrl: 'https://console.apify.com/actors/jungle_synthesizer~brazil-cnpj-receita-federal-crawler/input',
