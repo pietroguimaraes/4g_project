@@ -11,6 +11,18 @@ const TIPOS_LOJA = [
   'Papelaria',
 ]
 
+const CAPITAIS: Record<string, string> = {
+  AC: 'Rio Branco',      AL: 'Maceió',          AP: 'Macapá',
+  AM: 'Manaus',          BA: 'Salvador',         CE: 'Fortaleza',
+  DF: 'Brasília',        ES: 'Vitória',          GO: 'Goiânia',
+  MA: 'São Luís',        MT: 'Cuiabá',           MS: 'Campo Grande',
+  MG: 'Belo Horizonte',  PA: 'Belém',            PB: 'João Pessoa',
+  PR: 'Curitiba',        PE: 'Recife',            PI: 'Teresina',
+  RJ: 'Rio de Janeiro',  RN: 'Natal',            RS: 'Porto Alegre',
+  RO: 'Porto Velho',     RR: 'Boa Vista',        SC: 'Florianópolis',
+  SP: 'São Paulo',       SE: 'Aracaju',          TO: 'Palmas',
+}
+
 const ESTADOS = [
   { uf: 'AC', nome: 'Acre' },
   { uf: 'AL', nome: 'Alagoas' },
@@ -199,9 +211,25 @@ export function SearchForm() {
             <option value="">
               {!estado ? 'Selecione o estado primeiro' : loadingCidades ? 'Carregando cidades...' : 'Selecione...'}
             </option>
-            {cidades.map((c) => (
-              <option key={c} value={c}>{c}</option>
-            ))}
+            {[...cidades]
+              .sort((a, b) => {
+                const capital = CAPITAIS[estado]
+                if (a === capital) return -1
+                if (b === capital) return 1
+                return 0
+              })
+              .map((c) => {
+                const isCapital = CAPITAIS[estado] === c
+                return (
+                  <option
+                    key={c}
+                    value={c}
+                    style={isCapital ? { color: '#b8860b', fontWeight: '700' } : undefined}
+                  >
+                    {isCapital ? `★ ${c}` : c}
+                  </option>
+                )
+              })}
           </select>
         </div>
 
