@@ -56,12 +56,6 @@ const SEARCH_STRINGS = {
     'magazine luiza','loja americanas','loja de ar condicionado',
     'loja de câmeras fotográficas','loja de som automotivo',
   ],
-  'Papelaria': [
-    'papelaria','loja de material escolar',
-    'papelaria e livraria','livraria loja','loja de escritório',
-    'material de escritório loja','loja de encadernação','loja de carimbo',
-    'loja de arte e desenho','loja de molduras quadros',
-  ],
   'Lojas de Variedades/1,99/miudezas/bazares': [
     'loja de variedades','bazar','armarinho','utilidades domésticas loja',
     'casa e cozinha loja','loja 1,99','loja de presentes',
@@ -76,7 +70,6 @@ const APPROVED = {
   'Lojas de artigos esportivos': ['artigos esportivos','material esportivo','equipamentos esportivos','sporting goods','loja esportiva','bicicletas','ciclismo','bicycle','pesca esportiva','loja de pesca','fishing store','artigos de pesca','surf','skate','skateboard','roupas esportivas','sportswear','sports clothing','corrida','running','futebol','artigos de futebol','football store','tênis esportivo','calçados esportivos','sport','esporte','outdoor','camping'],
   'Lojas de brinquedos': ['brinquedos','toy store','hobby','jogos infantis','loja de jogos','brinquedo','artigos infantis','loja infantil','kids','bonecas','boneca','action figure','lego','games infantis'],
   'Eletroportáteis/eletrônicos': ['eletrônicos','electronics','eletrodomésticos','home appliance','celulares','cell phone','informática','computer store','eletroportáteis','appliance store','eletroeletrônicos','games','video game','fotografia','câmera'],
-  'Papelaria': ['papelaria','stationery','material escolar','office supply','livraria','material de escritório','arte e desenho','moldura'],
   'Lojas de Variedades/1,99/miudezas/bazares': ['variedades','variety store','bazar','bazaar','armarinho','utilidades domésticas','home goods','utilidades','casa e cozinha','cozinha e lar','kitchen','presentes','gift shop','importados','import store','1,99','dollar store','miudezas','loja geral','general store','quinquilharias','bijuterias','bijuteria','loja de desconto','discount store'],
 };
 const DENIED_GLOBAL = [
