@@ -42,9 +42,19 @@ function formatDate(dateStr: string) {
   return new Date(dateStr).toLocaleDateString('pt-BR')
 }
 
+interface Message {
+  id: string
+  role: 'lead' | 'lucas'
+  conteudo: string
+  created_at: string
+}
+
 export function KanbanCard({ lead, borderColor, onDeleted, isPequenos }: KanbanCardProps) {
   const [transferring, setTransferring] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [mensagens, setMensagens] = useState<Message[]>([])
+  const [loadingConversa, setLoadingConversa] = useState(false)
+  const [conversaAberta, setConversaAberta] = useState(false)
   const isDraggable = lead.status !== 'TRANSFERIDOS'
 
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
@@ -71,6 +81,17 @@ export function KanbanCard({ lead, borderColor, onDeleted, isPequenos }: KanbanC
     }
   }
 
+  async function abrirConversa() {
+    setConversaAberta(true)
+    setLoadingConversa(true)
+    try {
+      const res = await fetch(`/api/leads/${encodeURIComponent(lead.telefone)}/messages`)
+      if (res.ok) setMensagens(await res.json())
+    } finally {
+      setLoadingConversa(false)
+    }
+  }
+
   async function handleDelete() {
     setDeleting(true)
     try {
@@ -93,6 +114,65 @@ export function KanbanCard({ lead, borderColor, onDeleted, isPequenos }: KanbanC
         <span className="inline-block mt-1 text-xs px-2 py-0.5 rounded-full font-medium bg-purple-100 text-purple-700">
           Manual
         </span>
+      )}
+
+      {lead.data_resposta && (
+        <>
+          <button
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={(e) => { e.stopPropagation(); abrirConversa() }}
+            className="mt-2 w-full text-xs bg-indigo-50 text-indigo-600 border border-indigo-200 rounded px-2 py-1 hover:bg-indigo-100 transition-colors"
+          >
+            Ver conversa
+          </button>
+
+          <Dialog open={conversaAberta} onOpenChange={setConversaAberta}>
+            <DialogContent showCloseButton={false} className="max-w-md max-h-[80vh] flex flex-col">
+              <DialogHeader>
+                <DialogTitle className="text-sm">Conversa — {lead.empresa}</DialogTitle>
+              </DialogHeader>
+
+              <div className="flex-1 overflow-y-auto space-y-2 py-2 min-h-0">
+                {loadingConversa && (
+                  <p className="text-xs text-center text-gray-400 py-8">Carregando...</p>
+                )}
+                {!loadingConversa && mensagens.length === 0 && (
+                  <p className="text-xs text-center text-gray-400 py-8">Nenhuma mensagem registrada.</p>
+                )}
+                {mensagens.map((m) => (
+                  <div
+                    key={m.id}
+                    className={`flex ${m.role === 'lucas' ? 'justify-end' : 'justify-start'}`}
+                  >
+                    <div
+                      className={`max-w-[80%] rounded-lg px-3 py-2 text-xs ${
+                        m.role === 'lucas'
+                          ? 'bg-indigo-600 text-white'
+                          : 'bg-gray-100 text-gray-800'
+                      }`}
+                    >
+                      <p className={`text-[10px] font-semibold mb-1 ${m.role === 'lucas' ? 'text-indigo-200' : 'text-gray-400'}`}>
+                        {m.role === 'lucas' ? 'Lucas' : lead.empresa}
+                      </p>
+                      <p className="whitespace-pre-wrap leading-relaxed">{m.conteudo}</p>
+                      <p className={`text-[10px] mt-1 ${m.role === 'lucas' ? 'text-indigo-300' : 'text-gray-400'}`}>
+                        {new Date(m.created_at).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <DialogFooter>
+                <DialogClose asChild>
+                  <button className="text-xs bg-gray-100 text-gray-700 rounded px-3 py-1.5 hover:bg-gray-200 transition-colors">
+                    Fechar
+                  </button>
+                </DialogClose>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </>
       )}
 
       <div className="mt-2 flex gap-1">
