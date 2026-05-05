@@ -8,7 +8,6 @@ const TIPOS_LOJA = [
   'Lojas de Variedades/1,99/miudezas/bazares',
   'Lojas de brinquedos',
   'Lojas de artigos esportivos',
-  'Papelaria',
 ]
 
 const CAPITAIS: Record<string, string> = {
