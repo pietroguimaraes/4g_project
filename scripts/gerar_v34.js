@@ -242,8 +242,9 @@ const nodeForaHorario = {
     bodyParameters: {
       parameters: [
         {
+          // Usa referência ao webhook — funciona tanto no fluxo de texto quanto de áudio
           name: 'number',
-          value: '={{ $json.body.chat.wa_chatid.replace(/\\D/g, \'\') }}',
+          value: "={{ $('recebe_msg_do_lead').item.json.body.chat.wa_chatid.replace(/\\D/g, '') }}",
         },
         {
           name: 'text',
@@ -345,7 +346,10 @@ const nodeMapearCatalogo = {
   parameters: {
     jsCode: `const lead = $input.first().json;
 const tipoLoja = (lead && !lead.error) ? (lead.tipo_loja || '') : '';
-const mensagem = $('set_texto_mensagem1').item.json.mensagem;
+// Tenta set_texto_mensagem1 (fluxo texto) ou set_texto_audio (fluxo áudio)
+let mensagem = '';
+try { mensagem = $('set_texto_mensagem1').item.json.mensagem || ''; } catch(e) {}
+if (!mensagem) { try { mensagem = $('set_texto_audio').item.json.mensagem || ''; } catch(e) {} }
 
 const MAP_SEM = {
   'Lojas de artigos esportivos':          'https://drive.google.com/file/d/1XH_2HgbwUr1xiNg-YwlTtV24KsjwYzWz/view?usp=sharing',
@@ -368,7 +372,144 @@ return [{ json: {
   },
 };
 
-d.nodes.push(nodeVerificarResultado, nodeMarcarErro, nodeHorario, nodeForaHorario, nodeSalvarLead, nodeSalvarLucas, nodeBuscarTipo, nodeMapearCatalogo);
+// ─────────────────────────────────────────────────────────────
+// ÁUDIO: transcrição via OpenAI Whisper
+// Fluxo: detectar_audio → baixar_audio → transcrever_whisper
+//        → horario_audio → set_texto_audio → [salvar_msg_lead, buscar_lead_tipo]
+//
+// ⚠️  VARIÁVEL NECESSÁRIA: OPENAI_API_KEY em n8n Settings → Variables
+// ⚠️  VERIFICAR: se o endpoint uazapi /message/downloadMedia não funcionar,
+//     consulte a documentação da sua instância para o endpoint correto.
+// ─────────────────────────────────────────────────────────────
+
+// 13. detectar_audio — verifica se a mensagem é áudio/PTT
+const nodeDetectarAudio = {
+  id: 'detectar-audio-v34',
+  name: 'detectar_audio',
+  type: 'n8n-nodes-base.if',
+  typeVersion: 2.2,
+  position: [11900, 11300],
+  parameters: {
+    conditions: {
+      options: { caseSensitive: true, leftValue: '', typeValidation: 'strict', version: 2 },
+      conditions: [{
+        id: 'check-audio',
+        leftValue: '={{ $json.body.chat.wa_lastMessageType }}',
+        rightValue: 'AudioMessage',
+        operator: { type: 'string', operation: 'equals' },
+      }],
+      combinator: 'and',
+    },
+    options: {},
+  },
+};
+
+// 14. baixar_audio — descriptografa e baixa o arquivo via uazapi
+const nodeBaixarAudio = {
+  id: 'baixar-audio-v34',
+  name: 'baixar_audio',
+  type: 'n8n-nodes-base.httpRequest',
+  typeVersion: 4.3,
+  position: [12100, 11300],
+  continueOnFail: true,
+  parameters: {
+    method: 'POST',
+    url: `${UAZAPI_URL.replace('/send/text', '')}/message/downloadMedia`,
+    sendHeaders: true,
+    headerParameters: {
+      parameters: [{ name: 'token', value: UAZAPI_TOKEN }],
+    },
+    sendBody: true,
+    contentType: 'json',
+    body: "={{ JSON.stringify({ messageId: $json.body.message.messageid, owner: $json.body.owner, instanceName: $json.body.instanceName }) }}",
+    options: {
+      response: {
+        response: {
+          responseFormat: 'file',
+        },
+      },
+    },
+  },
+};
+
+// 15. transcrever_whisper — envia o áudio para OpenAI Whisper
+const nodeTranscreverWhisper = {
+  id: 'transcrever-whisper-v34',
+  name: 'transcrever_whisper',
+  type: 'n8n-nodes-base.httpRequest',
+  typeVersion: 4.3,
+  position: [12300, 11300],
+  continueOnFail: true,
+  parameters: {
+    method: 'POST',
+    url: 'https://api.openai.com/v1/audio/transcriptions',
+    sendHeaders: true,
+    headerParameters: {
+      parameters: [{ name: 'Authorization', value: "={{ 'Bearer ' + $env.OPENAI_API_KEY }}" }],
+    },
+    sendBody: true,
+    contentType: 'multipart-form-data',
+    bodyParameters: {
+      parameters: [
+        { name: 'model', value: 'whisper-1' },
+        { name: 'language', value: 'pt' },
+        { name: 'file', value: '', parameterType: 'formBinaryData', inputDataFieldName: 'data' },
+      ],
+    },
+  },
+};
+
+// 16. horario_audio — mesma verificação de horário comercial para áudio
+const nodeHorarioAudio = {
+  id: 'horario-audio-v34',
+  name: 'horario_audio',
+  type: 'n8n-nodes-base.if',
+  typeVersion: 2.2,
+  position: [12500, 11300],
+  parameters: {
+    conditions: {
+      options: { caseSensitive: true, leftValue: '', typeValidation: 'strict', version: 2 },
+      conditions: [{
+        id: 'check-horario-audio',
+        leftValue: '={{ (() => { const h = new Date().toLocaleString("en-US", { timeZone: "America/Sao_Paulo", hour: "2-digit", hour12: false }).replace(/\\D/g,""); return parseInt(h) >= 8 && parseInt(h) < 20; })() }}',
+        rightValue: true,
+        operator: { type: 'boolean', operation: 'equals' },
+      }],
+      combinator: 'and',
+    },
+    options: {},
+  },
+};
+
+// 17. set_texto_audio — prepara mensagem transcrita no formato do fluxo
+const nodeSetTextoAudio = {
+  id: 'set-texto-audio-v34',
+  name: 'set_texto_audio',
+  type: 'n8n-nodes-base.set',
+  typeVersion: 3.4,
+  position: [12700, 11300],
+  parameters: {
+    assignments: {
+      assignments: [
+        {
+          id: 'set-mensagem-audio',
+          name: 'mensagem',
+          value: '={{ $json.text }}',
+          type: 'string',
+        },
+        {
+          id: 'set-sender-audio',
+          name: 'sender',
+          value: "={{ $('recebe_msg_do_lead').item.json.body.chat.wa_name }}",
+          type: 'string',
+        },
+      ],
+    },
+    options: {},
+  },
+};
+
+d.nodes.push(nodeVerificarResultado, nodeMarcarErro, nodeHorario, nodeForaHorario, nodeSalvarLead, nodeSalvarLucas, nodeBuscarTipo, nodeMapearCatalogo, nodeDetectarAudio, nodeBaixarAudio, nodeTranscreverWhisper, nodeHorarioAudio, nodeSetTextoAudio);
 
 // ─────────────────────────────────────────────────────────────
 // Atualizar conexões — Busca
@@ -418,6 +559,47 @@ d.connections['buscar_lead_tipo'] = {
 };
 d.connections['mapear_catalogo'] = {
   main: [[{ node: 'AI Agent1', type: 'main', index: 0 }]],
+};
+
+// ─────────────────────────────────────────────────────────────
+// Conexões — Áudio
+// ─────────────────────────────────────────────────────────────
+
+// tipo_mensagem1[1] (sem texto) → detectar_audio (era → HTTP Request4 direto)
+d.connections['tipo_mensagem1'].main[1] = [
+  { node: 'detectar_audio', type: 'main', index: 0 },
+];
+
+// detectar_audio → [0] baixar_audio | [1] HTTP Request4 (formato inválido)
+d.connections['detectar_audio'] = {
+  main: [
+    [{ node: 'baixar_audio', type: 'main', index: 0 }],
+    [{ node: 'HTTP Request4', type: 'main', index: 0 }],
+  ],
+};
+
+// baixar_audio → transcrever_whisper → horario_audio
+d.connections['baixar_audio'] = {
+  main: [[{ node: 'transcrever_whisper', type: 'main', index: 0 }]],
+};
+d.connections['transcrever_whisper'] = {
+  main: [[{ node: 'horario_audio', type: 'main', index: 0 }]],
+};
+
+// horario_audio → [0] set_texto_audio | [1] msg_fora_horario (mesmo node do fluxo de texto)
+d.connections['horario_audio'] = {
+  main: [
+    [{ node: 'set_texto_audio', type: 'main', index: 0 }],
+    [{ node: 'msg_fora_horario', type: 'main', index: 0 }],
+  ],
+};
+
+// set_texto_audio → [salvar_msg_lead (paralelo), buscar_lead_tipo (série)] — mesmo padrão do set_texto_mensagem1
+d.connections['set_texto_audio'] = {
+  main: [[
+    { node: 'salvar_msg_lead', type: 'main', index: 0 },
+    { node: 'buscar_lead_tipo', type: 'main', index: 0 },
+  ]],
 };
 
 // response_to_whebhook → If3 + salvar_msg_lucas (paralelo)
