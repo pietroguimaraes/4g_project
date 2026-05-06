@@ -52,7 +52,11 @@ const ESTADOS = [
   { uf: 'TO', nome: 'Tocantins' },
 ]
 
-export function SearchForm() {
+interface SearchFormProps {
+  onSearchComplete?: () => void
+}
+
+export function SearchForm({ onSearchComplete }: SearchFormProps) {
   const [estado, setEstado] = useState('')
   const [cidade, setCidade] = useState('')
   const [cidades, setCidades] = useState<string[]>([])
@@ -125,6 +129,7 @@ export function SearchForm() {
               mensagem: `Busca concluída: ${entregues} de ${quantidadePedida} empresas encontradas${sufixoRodadas}. Essa cidade pode não ter mais lojas desse tipo disponíveis no Google Maps.`,
             })
           }
+          onSearchComplete?.()
         } else if (search.status === 'ERRO') {
           stopPolling()
           setLoading(false)
