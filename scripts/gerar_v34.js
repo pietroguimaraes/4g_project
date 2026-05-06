@@ -404,7 +404,10 @@ const nodeDetectarAudio = {
   },
 };
 
-// 14. baixar_audio — descriptografa e baixa o arquivo via uazapi
+// 14. baixar_audio — descriptografa o áudio via uazapi
+//     Envia os 6 campos de content do webhook, retorna Base64.
+//     ⚠️ Endpoint confirmado pelo padrão wuzapi/whatsmeow; verifique na
+//        sua instância uazapi se o path é idêntico (/chat/downloadaudio).
 const nodeBaixarAudio = {
   id: 'baixar-audio-v34',
   name: 'baixar_audio',
@@ -414,25 +417,46 @@ const nodeBaixarAudio = {
   continueOnFail: true,
   parameters: {
     method: 'POST',
-    url: `${UAZAPI_URL.replace('/send/text', '')}/message/downloadMedia`,
+    url: `${UAZAPI_URL.replace('/send/text', '')}/chat/downloadaudio`,
     sendHeaders: true,
     headerParameters: {
       parameters: [{ name: 'token', value: UAZAPI_TOKEN }],
     },
     sendBody: true,
     contentType: 'json',
-    body: "={{ JSON.stringify({ messageId: $json.body.message.messageid, owner: $json.body.owner, instanceName: $json.body.instanceName }) }}",
-    options: {
-      response: {
-        response: {
-          responseFormat: 'file',
-        },
-      },
-    },
+    body: `={{ JSON.stringify({
+  Url:          $json.body.message.content.URL,
+  Mimetype:     $json.body.message.content.mimetype,
+  FileSHA256:   $json.body.message.content.fileSHA256,
+  FileLength:   $json.body.message.content.fileLength,
+  MediaKey:     $json.body.message.content.mediaKey,
+  FileEncSHA256:$json.body.message.content.fileEncSHA256
+}) }}`,
   },
 };
 
-// 15. transcrever_whisper — envia o áudio para OpenAI Whisper
+// 14b. converter_audio — converte Base64 (resposta uazapi) → binário (para Whisper)
+//      A resposta do uazapi vem como { Data: "<base64>" }
+const nodeConverterAudio = {
+  id: 'converter-audio-v34',
+  name: 'converter_audio',
+  type: 'n8n-nodes-base.code',
+  typeVersion: 2,
+  position: [12200, 11300],
+  continueOnFail: true,
+  parameters: {
+    jsCode: `const base64 = $json.Data || $json.data || $json.base64;
+if (!base64) {
+  // Áudio não pôde ser baixado — passa item vazio para o Whisper tratar com continueOnFail
+  return [{ json: { _audio_error: true } }];
+}
+const buffer = Buffer.from(base64, 'base64');
+const binary = await this.helpers.prepareBinaryData(buffer, 'audio.ogg', 'audio/ogg');
+return [{ json: {}, binary: { data: binary } }];`,
+  },
+};
+
+// 15. transcrever_whisper — envia o áudio (binário) para OpenAI Whisper
 const nodeTranscreverWhisper = {
   id: 'transcrever-whisper-v34',
   name: 'transcrever_whisper',
@@ -509,7 +533,7 @@ const nodeSetTextoAudio = {
   },
 };
 
-d.nodes.push(nodeVerificarResultado, nodeMarcarErro, nodeHorario, nodeForaHorario, nodeSalvarLead, nodeSalvarLucas, nodeBuscarTipo, nodeMapearCatalogo, nodeDetectarAudio, nodeBaixarAudio, nodeTranscreverWhisper, nodeHorarioAudio, nodeSetTextoAudio);
+d.nodes.push(nodeVerificarResultado, nodeMarcarErro, nodeHorario, nodeForaHorario, nodeSalvarLead, nodeSalvarLucas, nodeBuscarTipo, nodeMapearCatalogo, nodeDetectarAudio, nodeBaixarAudio, nodeConverterAudio, nodeTranscreverWhisper, nodeHorarioAudio, nodeSetTextoAudio);
 
 // ─────────────────────────────────────────────────────────────
 // Atualizar conexões — Busca
@@ -578,8 +602,11 @@ d.connections['detectar_audio'] = {
   ],
 };
 
-// baixar_audio → transcrever_whisper → horario_audio
+// baixar_audio → converter_audio (Base64→binário) → transcrever_whisper → horario_audio
 d.connections['baixar_audio'] = {
+  main: [[{ node: 'converter_audio', type: 'main', index: 0 }]],
+};
+d.connections['converter_audio'] = {
   main: [[{ node: 'transcrever_whisper', type: 'main', index: 0 }]],
 };
 d.connections['transcrever_whisper'] = {
