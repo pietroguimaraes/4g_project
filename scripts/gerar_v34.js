@@ -306,7 +306,69 @@ const nodeSalvarLucas = {
   },
 };
 
-d.nodes.push(nodeVerificarResultado, nodeMarcarErro, nodeHorario, nodeForaHorario, nodeSalvarLead, nodeSalvarLucas);
+// ─────────────────────────────────────────────────────────────
+// 11. Novo node: buscar_lead_tipo (HTTP GET)
+//     Busca tipo_loja do lead para selecionar o catálogo correto.
+//     continueOnFail=true: se lead não encontrado, mapear_catalogo usa o padrão.
+// ─────────────────────────────────────────────────────────────
+const nodeBuscarTipo = {
+  id: 'buscar-lead-tipo-v34',
+  name: 'buscar_lead_tipo',
+  type: 'n8n-nodes-base.httpRequest',
+  typeVersion: 4.3,
+  position: [12050, 10800],
+  continueOnFail: true,
+  parameters: {
+    method: 'GET',
+    url: `={{ '${API_BASE}/leads/' + (() => { const raw = $('recebe_msg_do_lead').item.json.body.chat.wa_chatid.replace(/\\D/g, ''); return raw.length === 12 ? raw.substring(0,4)+'9'+raw.substring(4) : raw; })() }}`,
+    sendHeaders: true,
+    headerParameters: {
+      parameters: [{ name: 'x-api-key', value: N8N_API_KEY }],
+    },
+  },
+};
+
+// ─────────────────────────────────────────────────────────────
+// 12. Novo node: mapear_catalogo (Code)
+//     Mapeia tipo_loja → catalogoSemPreco + catalogoComPreco.
+//     Passa mensagem adiante para o AI Agent.
+//
+//     Variedades/Brinquedos → mesmo catálogo (ambas as versões)
+//     Esportes              → catálogo próprio (ambas as versões)
+// ─────────────────────────────────────────────────────────────
+const nodeMapearCatalogo = {
+  id: 'mapear-catalogo-v34',
+  name: 'mapear_catalogo',
+  type: 'n8n-nodes-base.code',
+  typeVersion: 2,
+  position: [12250, 10800],
+  parameters: {
+    jsCode: `const lead = $input.first().json;
+const tipoLoja = (lead && !lead.error) ? (lead.tipo_loja || '') : '';
+const mensagem = $('set_texto_mensagem1').item.json.mensagem;
+
+const MAP_SEM = {
+  'Lojas de artigos esportivos':          'https://drive.google.com/file/d/1XH_2HgbwUr1xiNg-YwlTtV24KsjwYzWz/view?usp=sharing',
+  'Lojas de Variedades/1,99/miudezas/bazares': 'https://drive.google.com/file/d/11YiyZcIzNFdT3TwIvza86RwHe9bnbxJ8/view?usp=sharing',
+  'Lojas de brinquedos':                  'https://drive.google.com/file/d/11YiyZcIzNFdT3TwIvza86RwHe9bnbxJ8/view?usp=sharing',
+};
+const MAP_COM = {
+  'Lojas de artigos esportivos':          'https://drive.google.com/file/d/1AoW1MJ2SqJ0rIVv4JPRgNQi0G24VMCeS/view?usp=sharing',
+  'Lojas de Variedades/1,99/miudezas/bazares': 'https://drive.google.com/file/d/1pty9brYjkVj6HKKdOW5_VFsESA2pEGmA/view?usp=sharing',
+  'Lojas de brinquedos':                  'https://drive.google.com/file/d/1pty9brYjkVj6HKKdOW5_VFsESA2pEGmA/view?usp=sharing',
+};
+const DEFAULT_SEM = 'https://drive.google.com/file/d/11YiyZcIzNFdT3TwIvza86RwHe9bnbxJ8/view?usp=sharing';
+const DEFAULT_COM = 'https://drive.google.com/file/d/1pty9brYjkVj6HKKdOW5_VFsESA2pEGmA/view?usp=sharing';
+
+return [{ json: {
+  mensagem,
+  catalogoSemPreco: MAP_SEM[tipoLoja] || DEFAULT_SEM,
+  catalogoComPreco: MAP_COM[tipoLoja] || DEFAULT_COM,
+} }];`,
+  },
+};
+
+d.nodes.push(nodeVerificarResultado, nodeMarcarErro, nodeHorario, nodeForaHorario, nodeSalvarLead, nodeSalvarLucas, nodeBuscarTipo, nodeMapearCatalogo);
 
 // ─────────────────────────────────────────────────────────────
 // Atualizar conexões — Busca
@@ -342,11 +404,19 @@ d.connections['horario_comercial'] = {
   ],
 };
 
-// set_texto_mensagem1 → salvar_msg_lead → AI Agent1
+// set_texto_mensagem1 → [salvar_msg_lead (paralelo, dead-end)] + [buscar_lead_tipo → mapear_catalogo → AI Agent1]
 d.connections['set_texto_mensagem1'].main[0] = [
   { node: 'salvar_msg_lead', type: 'main', index: 0 },
+  { node: 'buscar_lead_tipo', type: 'main', index: 0 },
 ];
-d.connections['salvar_msg_lead'] = {
+// salvar_msg_lead é dead-end (sem saída) — apenas persiste a mensagem do lead
+delete d.connections['salvar_msg_lead'];
+
+// buscar_lead_tipo → mapear_catalogo → AI Agent1
+d.connections['buscar_lead_tipo'] = {
+  main: [[{ node: 'mapear_catalogo', type: 'main', index: 0 }]],
+};
+d.connections['mapear_catalogo'] = {
   main: [[{ node: 'AI Agent1', type: 'main', index: 0 }]],
 };
 
@@ -365,21 +435,55 @@ andersonNode.parameters.bodyParameters.parameters[0].value =
   "={{ $env.ANDERSON_WHATSAPP || '556291386776' }}";
 
 // ─────────────────────────────────────────────────────────────
-// 8. Link do catálogo via variável de ambiente
-//    Configure em n8n: Settings → Variables → CATALOGO_URL
+// 8. Catálogos dinâmicos por categoria
+//    mapear_catalogo fornece $json.catalogoSemPreco e $json.catalogoComPreco
+//    para o AI Agent, baseado no tipo_loja do lead.
+//
+//    Regras do system message:
+//    - Abertura: envia catalogoSemPreco
+//    - Cliente pede preço/tabela: envia catalogoComPreco, continua conversa
+//    - Após catálogo com preços, qualquer follow-up → encaminhar
 // ─────────────────────────────────────────────────────────────
 const aiNode = d.nodes.find(n => n.name === 'AI Agent1');
-aiNode.parameters.options.systemMessage = aiNode.parameters.options.systemMessage.replace(
+let sm = aiNode.parameters.options.systemMessage;
+
+// 1. Substituir URL hardcoded do catálogo sem preços por referência dinâmica
+sm = sm.replace(
   'https://drive.google.com/file/d/1cSDGFEBlq3rIHMVeBKUxDdjS9yhPO5Lc/view?usp=sharing',
-  "{{ $env.CATALOGO_URL || 'https://drive.google.com/file/d/1cSDGFEBlq3rIHMVeBKUxDdjS9yhPO5Lc/view?usp=sharing' }}"
+  '{{ $json.catalogoSemPreco }}'
 );
+
+// 2. Remover Preço e Tabela da lista de encaminhamento imediato
+sm = sm.replace('  - Preço\n', '').replace('  - Tabela\n', '');
+
+// 3. Inserir seção CATÁLOGO COM PREÇOS imediatamente antes de ENCAMINHAMENTO IMEDIATO
+const SECAO_PRECO = `  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  CATÁLOGO COM PREÇOS
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Se o lead perguntar sobre PREÇO ou TABELA:
+  → NÃO encaminhe ainda.
+  → Envie exatamente esta mensagem:
+    "Claro! Aqui está nosso catálogo com os preços. Dê uma olhada e me fala o que achar!
+    {{ $json.catalogoComPreco }}"
+  → Continue a conversa normalmente após enviar.
+  → Se APÓS este catálogo com preços o lead fizer qualquer nova pergunta
+    (sobre produtos, prazo, frete, parcelamento, etc.) → ENCAMINHE imediatamente.
+
+  `;
+sm = sm.replace(
+  '  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n  ENCAMINHAMENTO IMEDIATO POR TEMA',
+  SECAO_PRECO + '  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n  ENCAMINHAMENTO IMEDIATO POR TEMA'
+);
+
+aiNode.parameters.options.systemMessage = sm;
 
 // ─────────────────────────────────────────────────────────────
 // apifyNode customBody (mantém igual ao v33)
 // ─────────────────────────────────────────────────────────────
 apifyNode.parameters.customBody = "={{ JSON.stringify({\n  searchStringsArray: $('mapear_tipo_loja').item.json.searchStringsArray,\n  maxCrawledPlacesPerSearch: $('mapear_tipo_loja').item.json.perSearch,\n  maxResults: $('mapear_tipo_loja').item.json.maxResults,\n  language: 'pt-PT',\n  locationQuery: $('mapear_tipo_loja').item.json.locationQuery\n}) }}";
 
-console.log('v34: perSearch min=4, continueOnFail, verificar_resultado, marcar_busca_erro, horario_comercial, msg_fora_horario, env vars');
+console.log('v34: perSearch min=4, continueOnFail, verificar_resultado, marcar_busca_erro, horario_comercial, msg_fora_horario, catálogos dinâmicos por categoria');
 
 d.name = 'Fluxo_4g — Dashboard v2 (v34 maxima-performance)';
 const output = JSON.stringify(d, null, 2);

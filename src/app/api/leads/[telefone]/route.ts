@@ -9,6 +9,32 @@ const VALID_STATUSES: LeadStatus[] = [
   'LOCALIZADOS', 'PROSPECTAR', 'PROSPECTADOS', 'INTERESSE', 'TRANSFERIDOS', 'DESCARTADOS', 'NAO_RESPONDERAM', 'PEQUENOS',
 ]
 
+// GET /api/leads/[telefone] — n8n busca tipo_loja para selecionar catálogo
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ telefone: string }> }
+) {
+  const apiKey = request.headers.get('x-api-key')
+  if (apiKey !== process.env.N8N_API_KEY) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  const { telefone } = await params
+  const supabase = createServiceClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+
+  const { data } = await supabase
+    .from('leads')
+    .select('id, empresa, telefone, tipo_loja, categoria, status')
+    .eq('telefone', decodeURIComponent(telefone))
+    .single()
+
+  // Retorna dados do lead ou objeto vazio — nunca retorna erro para não travar o n8n
+  return NextResponse.json(data ?? { tipo_loja: null })
+}
+
 export async function DELETE(
   _request: NextRequest,
   { params }: { params: Promise<{ telefone: string }> }
