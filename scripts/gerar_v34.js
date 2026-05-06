@@ -476,6 +476,38 @@ sm = sm.replace(
   SECAO_PRECO + '  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n  ENCAMINHAMENTO IMEDIATO POR TEMA'
 );
 
+// 4. ABERTURA: substituir instrução engessada por guia conversacional
+sm = sm.replace(
+  '  Envie exatamente esta mensagem:\n  "Esse é o catálogo completo com toda a nossa linha. Dê uma olhada e me fala o que te interessa mais.\n  {{ $json.catalogoSemPreco }}"',
+  `  Responda de forma natural, espelhando o tom do cliente. Se ele disse só "oi" ou "olá",
+  cumprimente de volta ANTES de enviar o catálogo. Nunca inicie direto com o catálogo sem
+  ao menos uma palavra de resposta ao cumprimento.
+
+  Exemplos:
+  — Cliente disse "oi" ou "olá":
+    "Oi! Tudo bem? Já mando nosso catálogo completo pra você dar uma olhada 😊
+    {{ $json.catalogoSemPreco }}"
+
+  — Cliente disse "pode mandar" ou "quero ver":
+    "Claro! Segue o catálogo com toda a nossa linha:
+    {{ $json.catalogoSemPreco }}"
+
+  — Cliente disse algo mais detalhado:
+    Responda ao que ele disse e inclua o catálogo de forma natural na mesma mensagem.`
+);
+
+// 5. REGRAS: adicionar regra de linguagem humana (anti-bot)
+sm = sm.replace(
+  '  - Nunca invente informações sobre preços ou produtos',
+  '  - Nunca invente informações sobre preços ou produtos\n  - Seja sempre natural e humano. Nunca use frases de bot ("parece que houve um problema", "vou tentar novamente", "ocorreu um erro", etc.). Se o cliente não conseguir abrir o catálogo, reenvie de forma descontraída, como um consultor faria.'
+);
+
+// 6. RESUMO INTERNO (encaminhamento imediato): adicionar campo Contexto
+sm = sm.replace(
+  '  Nota: [número de 0 a 10 ou 5 se não qualificado ainda]\n\n  ---',
+  '  Nota: [número de 0 a 10 ou 5 se não qualificado ainda]\n  Contexto: [descreva em 1-2 frases o que foi discutido e por que está encaminhando agora]\n\n  ---'
+);
+
 aiNode.parameters.options.systemMessage = sm;
 
 // ─────────────────────────────────────────────────────────────
