@@ -404,10 +404,7 @@ const nodeDetectarAudio = {
   },
 };
 
-// 14. baixar_audio — descriptografa o áudio via uazapi
-//     Envia os 6 campos de content do webhook, retorna Base64.
-//     ⚠️ Endpoint confirmado pelo padrão wuzapi/whatsmeow; verifique na
-//        sua instância uazapi se o path é idêntico (/chat/downloadaudio).
+// 14. baixar_audio — uazapi baixa o arquivo e retorna base64
 const nodeBaixarAudio = {
   id: 'baixar-audio-v34',
   name: 'baixar_audio',
@@ -417,79 +414,64 @@ const nodeBaixarAudio = {
   continueOnFail: true,
   parameters: {
     method: 'POST',
-    url: `${UAZAPI_URL.replace('/send/text', '')}/chat/downloadaudio`,
+    url: `${UAZAPI_URL.replace('/send/text', '')}/message/download`,
     sendHeaders: true,
     headerParameters: {
       parameters: [{ name: 'token', value: UAZAPI_TOKEN }],
     },
     sendBody: true,
     contentType: 'json',
-    body: `={{ JSON.stringify({
-  Url:          $json.body.message.content.URL,
-  Mimetype:     $json.body.message.content.mimetype,
-  FileSHA256:   $json.body.message.content.fileSHA256,
-  FileLength:   $json.body.message.content.fileLength,
-  MediaKey:     $json.body.message.content.mediaKey,
-  FileEncSHA256:$json.body.message.content.fileEncSHA256
-}) }}`,
+    body: '={{ JSON.stringify({ id: $json.body.message.messageid, return_base64: true, generate_mp3: false }) }}',
   },
 };
 
-// 14b. converter_audio — converte Base64 (resposta uazapi) → binário (para Whisper)
-//      A resposta do uazapi vem como { Data: "<base64>" }
-const nodeConverterAudio = {
-  id: 'converter-audio-v34',
-  name: 'converter_audio',
+// 15. converter_base64 — converte base64 → binário para o nó OpenAI
+const nodeConverterBase64 = {
+  id: 'converter-base64-v34',
+  name: 'converter_base64',
   type: 'n8n-nodes-base.code',
   typeVersion: 2,
-  position: [12200, 11300],
-  continueOnFail: true,
-  parameters: {
-    jsCode: `const base64 = $json.Data || $json.data || $json.base64;
-if (!base64) {
-  // Áudio não pôde ser baixado — passa item vazio para o Whisper tratar com continueOnFail
-  return [{ json: { _audio_error: true } }];
-}
-const buffer = Buffer.from(base64, 'base64');
-const binary = await this.helpers.prepareBinaryData(buffer, 'audio.ogg', 'audio/ogg');
-return [{ json: {}, binary: { data: binary } }];`,
-  },
-};
-
-// 15. transcrever_whisper — envia o áudio (binário) para OpenAI Whisper
-const nodeTranscreverWhisper = {
-  id: 'transcrever-whisper-v34',
-  name: 'transcrever_whisper',
-  type: 'n8n-nodes-base.httpRequest',
-  typeVersion: 4.3,
   position: [12300, 11300],
-  continueOnFail: true,
   parameters: {
-    method: 'POST',
-    url: 'https://api.openai.com/v1/audio/transcriptions',
-    sendHeaders: true,
-    headerParameters: {
-      parameters: [{ name: 'Authorization', value: "={{ 'Bearer ' + $env.OPENAI_API_KEY }}" }],
-    },
-    sendBody: true,
-    contentType: 'multipart-form-data',
-    bodyParameters: {
-      parameters: [
-        { name: 'model', value: 'whisper-1' },
-        { name: 'language', value: 'pt' },
-        { name: 'file', value: '', parameterType: 'formBinaryData', inputDataFieldName: 'data' },
-      ],
+    jsCode: `const base64Data = $input.first().json.base64;
+const mimeType = $input.first().json.mimetype || 'audio/ogg';
+const binaryData = await this.helpers.prepareBinaryData(
+  Buffer.from(base64Data, 'base64'),
+  'audio.ogg',
+  mimeType
+);
+return [{ json: {}, binary: { data: binaryData } }];`,
+  },
+};
+
+// 16. transcrever_audio — nó nativo OpenAI Whisper (usa credencial do n8n)
+//     Ao importar o workflow, n8n pedirá para mapear a credencial OpenAI.
+const nodeTranscreverAudio = {
+  id: 'transcrever-audio-v34',
+  name: 'transcrever_audio',
+  type: '@n8n/n8n-nodes-langchain.openAi',
+  typeVersion: 1.7,
+  position: [12500, 11300],
+  parameters: {
+    resource: 'audio',
+    operation: 'transcribe',
+    options: {},
+  },
+  credentials: {
+    openAiApi: {
+      id: 'OPENAI_CRED',
+      name: 'OpenAI account',
     },
   },
 };
 
-// 16. horario_audio — mesma verificação de horário comercial para áudio
+// 17. horario_audio — mesma verificação de horário comercial para áudio
 const nodeHorarioAudio = {
   id: 'horario-audio-v34',
   name: 'horario_audio',
   type: 'n8n-nodes-base.if',
   typeVersion: 2.2,
-  position: [12500, 11300],
+  position: [12750, 11300],
   parameters: {
     conditions: {
       options: { caseSensitive: true, leftValue: '', typeValidation: 'strict', version: 2 },
@@ -505,13 +487,13 @@ const nodeHorarioAudio = {
   },
 };
 
-// 17. set_texto_audio — prepara mensagem transcrita no formato do fluxo
+// 18. set_texto_audio — prepara mensagem transcrita no formato do fluxo
 const nodeSetTextoAudio = {
   id: 'set-texto-audio-v34',
   name: 'set_texto_audio',
   type: 'n8n-nodes-base.set',
   typeVersion: 3.4,
-  position: [12700, 11300],
+  position: [12950, 11300],
   parameters: {
     assignments: {
       assignments: [
@@ -533,7 +515,7 @@ const nodeSetTextoAudio = {
   },
 };
 
-d.nodes.push(nodeVerificarResultado, nodeMarcarErro, nodeHorario, nodeForaHorario, nodeSalvarLead, nodeSalvarLucas, nodeBuscarTipo, nodeMapearCatalogo, nodeDetectarAudio, nodeBaixarAudio, nodeConverterAudio, nodeTranscreverWhisper, nodeHorarioAudio, nodeSetTextoAudio);
+d.nodes.push(nodeVerificarResultado, nodeMarcarErro, nodeHorario, nodeForaHorario, nodeSalvarLead, nodeSalvarLucas, nodeBuscarTipo, nodeMapearCatalogo, nodeDetectarAudio, nodeBaixarAudio, nodeConverterBase64, nodeTranscreverAudio, nodeHorarioAudio, nodeSetTextoAudio);
 
 // ─────────────────────────────────────────────────────────────
 // Atualizar conexões — Busca
@@ -602,14 +584,14 @@ d.connections['detectar_audio'] = {
   ],
 };
 
-// baixar_audio → converter_audio (Base64→binário) → transcrever_whisper → horario_audio
+// baixar_audio → converter_base64 → transcrever_audio → horario_audio
 d.connections['baixar_audio'] = {
-  main: [[{ node: 'converter_audio', type: 'main', index: 0 }]],
+  main: [[{ node: 'converter_base64', type: 'main', index: 0 }]],
 };
-d.connections['converter_audio'] = {
-  main: [[{ node: 'transcrever_whisper', type: 'main', index: 0 }]],
+d.connections['converter_base64'] = {
+  main: [[{ node: 'transcrever_audio', type: 'main', index: 0 }]],
 };
-d.connections['transcrever_whisper'] = {
+d.connections['transcrever_audio'] = {
   main: [[{ node: 'horario_audio', type: 'main', index: 0 }]],
 };
 
