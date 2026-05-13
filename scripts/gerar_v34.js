@@ -518,6 +518,50 @@ const nodeSetTextoAudio = {
 d.nodes.push(nodeVerificarResultado, nodeMarcarErro, nodeHorario, nodeForaHorario, nodeSalvarLead, nodeSalvarLucas, nodeBuscarTipo, nodeMapearCatalogo, nodeDetectarAudio, nodeBaixarAudio, nodeConverterBase64, nodeTranscreverAudio, nodeHorarioAudio, nodeSetTextoAudio);
 
 // ─────────────────────────────────────────────────────────────
+// FIX BUG 1 + BUG 2 — Dedup robusto por messageId
+//
+// PROBLEMA ORIGINAL:
+//   registrar_mensagem sobrescrevia staticData[chatId] = ts com o mesmo valor
+//   quando o uazapi enviava 2 webhooks do mesmo evento (duplicata comum).
+//   verificar_mensagem via staticData[chatId] === ts passava as DUAS execuções,
+//   pois o ts era idêntico em ambas.
+//
+// CONSEQUÊNCIA:
+//   BUG 1 — msg_fora_horario disparava 2x (uma por execução duplicada)
+//   BUG 2 — AI Agent1 recebia 2–3 chamadas (uma por execução que chegava a mapear_catalogo)
+//
+// CORREÇÃO (mínima):
+//   registrar_mensagem: bloqueia imediatamente se staticData[msgId] já existe
+//   (interrompe a duplicata antes mesmo do wait_debounce — sem mudar a lógica de debounce)
+//   Continua salvando staticData[chatId] = ts para o debounce anti-rafaga funcionar.
+//   verificar_mensagem: inalterado (debounce por chatId continua funcionando).
+// ─────────────────────────────────────────────────────────────
+const nodeRegistrarMensagem = d.nodes.find(n => n.name === 'registrar_mensagem');
+if (nodeRegistrarMensagem) {
+  nodeRegistrarMensagem.parameters.jsCode = `const staticData = $getWorkflowStaticData('global');
+const chatId = $json.body.chat.wa_chatid || 'default';
+const timestamp = $json.body.message.messageTimestamp || Date.now();
+const msgId = $json.body.message.messageid || '';
+
+// Dedup robusto por messageId: bloqueia duplicatas do uazapi antes do debounce
+if (msgId && staticData['_seen_' + msgId]) {
+  return [];
+}
+if (msgId) {
+  staticData['_seen_' + msgId] = true;
+  // Limpar entradas antigas (mantém apenas os últimos 200 messageIds para não crescer indefinidamente)
+  const keys = Object.keys(staticData).filter(k => k.startsWith('_seen_'));
+  if (keys.length > 200) {
+    keys.slice(0, keys.length - 200).forEach(k => delete staticData[k]);
+  }
+}
+
+// Debounce anti-rafaga por chatId (lógica original preservada)
+staticData[chatId] = timestamp;
+return [{ json: { ...$json, _ts: timestamp, _chatId: chatId } }];`;
+}
+
+// ─────────────────────────────────────────────────────────────
 // Atualizar conexões — Busca
 // ─────────────────────────────────────────────────────────────
 
