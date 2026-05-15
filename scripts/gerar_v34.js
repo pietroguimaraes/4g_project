@@ -194,14 +194,9 @@ const nodeMarcarErro = {
       ],
     },
     sendBody: true,
-    contentType: 'json',
-    specifyBody: 'keypair',
-    bodyParameters: {
-      parameters: [
-        { name: 'status', value: 'ERRO' },
-        { name: 'quantidade_entregue', value: '={{ $json._total_entregue || 0 }}' },
-      ],
-    },
+    specifyBody: 'json',
+    jsonBody: "={{ JSON.stringify({ status: 'ERRO', quantidade_entregue: $json._total_entregue || 0 }) }}",
+    options: {},
   },
 };
 
