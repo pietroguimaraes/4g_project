@@ -139,11 +139,15 @@ return [{ json: {
 } }];`;
 
 // ─────────────────────────────────────────────────────────────
-// 2. Apify: continueOnFail=true
+// 2. Apify: continueOnFail=true + timeout aumentado
 //    Se o actor travar/falhar, o fluxo continua e _sem_resultado
 //    captura o erro no verificar_resultado logo depois.
+//
+//    timeout: 300s (5min) — evita que o actor pare cedo em cidades menores
 // ─────────────────────────────────────────────────────────────
 apifyNode.continueOnFail = true;
+apifyNode.parameters.options = apifyNode.parameters.options || {};
+apifyNode.parameters.options.timeout = 300000;
 
 // ─────────────────────────────────────────────────────────────
 // 3. Novo node: verificar_resultado (IF)
@@ -187,12 +191,17 @@ const nodeMarcarErro = {
     headerParameters: {
       parameters: [
         { name: 'x-api-key', value: N8N_API_KEY },
-        { name: 'Content-Type', value: 'application/json' },
       ],
     },
     sendBody: true,
     contentType: 'json',
-    body: '={{ JSON.stringify({ status: \'ERRO\' }) }}',
+    specifyBody: 'keypair',
+    bodyParameters: {
+      parameters: [
+        { name: 'status', value: 'ERRO' },
+        { name: 'quantidade_entregue', value: '={{ $json._total_entregue || 0 }}' },
+      ],
+    },
   },
 };
 
