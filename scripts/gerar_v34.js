@@ -670,6 +670,17 @@ andersonNode.parameters.bodyParameters.parameters[0].value =
   "={{ $env.ANDERSON_WHATSAPP || '556291386776' }}";
 
 // ─────────────────────────────────────────────────────────────
+// 7b. Mensagem de prospecção (aprovada pelo Anderson)
+// ─────────────────────────────────────────────────────────────
+const prospecaoNode = d.nodes.find(n => n.name === 'enviar_prospecao_webhook');
+if (prospecaoNode) {
+  const bodyParam = prospecaoNode.parameters?.bodyParameters?.parameters?.find(p => p.name === 'text');
+  if (bodyParam) {
+    bodyParam.value = '=Olá, {{ $json.Empresa }}! Somos a 4G, importadores de bolas recreativas — bolas de PVC em diversos tamanhos, nº2, nº3, nº5, bolas de vinil, upa upa. Temos também uma linha de brinquedos e itens de variedades.\nNossos produtos são importados da China e ficamos em São Paulo. Se tiver interesse, posso mandar o catálogo — dá uma olhada e nos chama que a gente entra em detalhes.';
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
 // 8. AI Agent — modelo, inteligência e prompt
 //
 //    Modelo:      gpt-4o (era gpt-4o-mini — melhor raciocínio contextual)
@@ -700,6 +711,15 @@ Bolas (futebol, futevôlei, vôlei, basquete, borracha infantil), raquetes, pati
 
 SUA MISSÃO:
 Qualificar lojistas para identificar potencial de compra B2B. Leads qualificados são encaminhados para o Anderson fechar a venda.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+CONTEXTO INICIAL
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Cada lead recebeu previamente esta mensagem de prospecção da 4G:
+"Olá, [nome da empresa]! Somos a 4G, importadores de bolas recreativas — bolas de PVC em diversos tamanhos, nº2, nº3, nº5, bolas de vinil, upa upa. Temos também uma linha de brinquedos e itens de variedades. Nossos produtos são importados da China e ficamos em São Paulo. Se tiver interesse, posso mandar o catálogo — dá uma olhada e nos chama que a gente entra em detalhes."
+
+A PRIMEIRA mensagem que você receber de qualquer lead é sempre uma resposta a essa prospecção. Trate como continuação dessa conversa — o lead já sabe quem somos e o que vendemos. Nunca se apresente como se fosse o primeiro contato.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ABERTURA
