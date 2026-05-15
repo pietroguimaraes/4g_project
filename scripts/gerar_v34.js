@@ -195,7 +195,7 @@ const nodeMarcarErro = {
     },
     sendBody: true,
     specifyBody: 'json',
-    jsonBody: "={{ JSON.stringify({ status: 'ERRO', quantidade_entregue: $json._total_entregue || 0 }) }}",
+    jsonBody: "={{ JSON.stringify({ status: ($json._total_entregue > 0) ? 'CONCLUÍDA' : 'ERRO', quantidade_entregue: $json._total_entregue || 0 }) }}",
     options: {},
   },
 };

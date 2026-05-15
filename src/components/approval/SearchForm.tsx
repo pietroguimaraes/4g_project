@@ -133,7 +133,7 @@ export function SearchForm({ onSearchComplete }: SearchFormProps) {
         } else if (search.status === 'ERRO') {
           stopPolling()
           setLoading(false)
-          setFeedback({ tipo: 'erro', mensagem: 'Erro na busca. Verifique o n8n e tente novamente.' })
+          setFeedback({ tipo: 'erro', mensagem: 'Nenhuma empresa encontrada. Essa cidade pode ter poucos resultados no Google Maps para esse tipo de loja. Tente outra cidade ou tipo.' })
         }
         // PENDENTE: continua polling
       } catch {
