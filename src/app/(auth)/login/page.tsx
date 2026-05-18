@@ -32,7 +32,7 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
       <div className="bg-white p-8 rounded-xl shadow-md w-full max-w-sm">
-        <h1 className="text-2xl font-bold text-center mb-2">4G Dashboard</h1>
+        <h1 className="text-2xl font-bold text-center mb-2">Distribuidora B2B</h1>
         <p className="text-gray-500 text-center text-sm mb-6">Faça login para continuar</p>
 
         <form onSubmit={handleLogin} className="flex flex-col gap-4">
@@ -43,7 +43,7 @@ export default function LoginPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              placeholder="anderson@4g.com"
+              placeholder="gestor@empresa.com"
               className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>

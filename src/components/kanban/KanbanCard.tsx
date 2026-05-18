@@ -33,9 +33,9 @@ interface KanbanCardProps {
 }
 
 const CATEGORIA_BADGE: Record<LeadCategoria, { label: string; color: string }> = {
-  'DOMÉSTICOS': { label: 'Domésticos', color: 'bg-blue-100 text-blue-700' },
-  'ESPORTIVOS': { label: 'Esportivos', color: 'bg-green-100 text-green-700' },
-  'MISTO': { label: 'Misto', color: 'bg-yellow-100 text-yellow-700' },
+  'ALIMENTÍCIO': { label: 'Alimentício', color: 'bg-blue-100 text-blue-700' },
+  'HIGIENE': { label: 'Higiene', color: 'bg-green-100 text-green-700' },
+  'LIMPEZA': { label: 'Limpeza', color: 'bg-yellow-100 text-yellow-700' },
 }
 
 function formatDate(dateStr: string) {
@@ -152,7 +152,7 @@ export function KanbanCard({ lead, borderColor, onDeleted, isPequenos }: KanbanC
                       }`}
                     >
                       <p className={`text-[10px] font-semibold mb-1 ${m.role === 'lucas' ? 'text-indigo-200' : 'text-gray-400'}`}>
-                        {m.role === 'lucas' ? 'Lucas' : lead.empresa}
+                        {m.role === 'lucas' ? 'Vendedor' : lead.empresa}
                       </p>
                       <p className="whitespace-pre-wrap leading-relaxed">{m.conteudo}</p>
                       <p className={`text-[10px] mt-1 ${m.role === 'lucas' ? 'text-indigo-300' : 'text-gray-400'}`}>
