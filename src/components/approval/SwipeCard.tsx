@@ -4,6 +4,15 @@ import { useState } from 'react'
 import { useDraggable } from '@dnd-kit/core'
 import type { Lead } from '@/types'
 
+const CATEGORIA_BADGE: Record<string, { label: string; color: string }> = {
+  'DOMÉSTICOS':  { label: 'Domésticos',  color: 'bg-blue-100 text-blue-700' },
+  'ESPORTIVOS':  { label: 'Esportivos',  color: 'bg-green-100 text-green-700' },
+  'MISTO':       { label: 'Misto',       color: 'bg-yellow-100 text-yellow-700' },
+  'ALIMENTÍCIO': { label: 'Alimentício', color: 'bg-blue-100 text-blue-700' },
+  'HIGIENE':     { label: 'Higiene',     color: 'bg-green-100 text-green-700' },
+  'LIMPEZA':     { label: 'Limpeza',     color: 'bg-yellow-100 text-yellow-700' },
+}
+
 interface SwipeCardProps {
   lead: Lead
   onApprove: (lead: Lead) => void
@@ -50,6 +59,8 @@ export function SwipeCard({ lead, onApprove, onDiscard }: SwipeCardProps) {
     }
   }
 
+  const badge = lead.categoria ? CATEGORIA_BADGE[lead.categoria] : null
+
   return (
     <div
       ref={setNodeRef}
@@ -65,6 +76,11 @@ export function SwipeCard({ lead, onApprove, onDiscard }: SwipeCardProps) {
         </span>
       )}
       <p className="font-semibold text-gray-900 text-sm truncate pr-16">{lead.empresa}</p>
+      {badge && (
+        <span className={`inline-block mt-1 text-xs px-2 py-0.5 rounded-full font-medium ${badge.color}`}>
+          {badge.label}
+        </span>
+      )}
       <p className="text-gray-500 text-xs mt-1">{lead.telefone}</p>
       {lead.cidade && (
         <p className="text-gray-400 text-xs mt-0.5">{lead.cidade}</p>
