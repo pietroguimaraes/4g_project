@@ -2,15 +2,15 @@ export default function ManualPage() {
   return (
     <div className="max-w-3xl mx-auto">
       <h1 className="text-2xl font-bold text-gray-900 mb-1">Manual de Uso</h1>
-      <p className="text-gray-500 text-sm mb-8">Guia completo do Distribuidora B2B</p>
+      <p className="text-gray-500 text-sm mb-8">Guia completo do 4G Dashboard</p>
 
       <div className="flex flex-col gap-6">
 
         {/* Visão geral */}
         <section className="bg-white rounded-lg border border-gray-200 p-5">
-          <h2 className="font-semibold text-gray-800 mb-3">📋 O que é o Distribuidora B2B?</h2>
+          <h2 className="font-semibold text-gray-800 mb-3">📋 O que é o 4G Dashboard?</h2>
           <p className="text-sm text-gray-600 leading-relaxed">
-            O Distribuidora B2B é o painel de controle da prospecção via WhatsApp. Ele recebe os clientes
+            O 4G Dashboard é o painel de controle da prospecção via WhatsApp. Ele recebe os clientes
             encontrados pelo sistema, permite que você revise e aprove cada um, e acompanha o andamento
             das conversas em tempo real — tudo em um só lugar.
           </p>

@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import type { LeadStatus, LeadCategoria } from '@/types'
 
-const VALID_CATEGORIAS: LeadCategoria[] = ['ALIMENTÍCIO', 'HIGIENE', 'LIMPEZA']
+const VALID_CATEGORIAS: LeadCategoria[] = ['DOMÉSTICOS', 'ESPORTIVOS', 'MISTO']
 
 const VALID_STATUSES: LeadStatus[] = [
   'LOCALIZADOS', 'PROSPECTAR', 'PROSPECTADOS', 'INTERESSE', 'TRANSFERIDOS', 'DESCARTADOS', 'NAO_RESPONDERAM', 'PEQUENOS',
