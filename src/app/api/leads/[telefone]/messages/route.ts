@@ -9,14 +9,17 @@ function serviceClient() {
   )
 }
 
-// GET /api/leads/[telefone]/messages — dashboard busca conversa
+// GET /api/leads/[telefone]/messages — dashboard busca conversa (sessão) ou n8n (x-api-key)
 export async function GET(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ telefone: string }> }
 ) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const apiKey = req.headers.get('x-api-key')
+  if (apiKey !== process.env.N8N_API_KEY) {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
 
   const { telefone } = await params
 
