@@ -61,7 +61,7 @@ export function SearchForm({ onSearchComplete }: SearchFormProps) {
   const [cidade, setCidade] = useState('')
   const [cidades, setCidades] = useState<string[]>([])
   const [loadingCidades, setLoadingCidades] = useState(false)
-  const [quantidade, setQuantidade] = useState('')
+  const [faixa, setFaixa] = useState<'PEQUENA' | 'MEDIA' | 'GRANDE' | ''>('')
   const [tipoLoja, setTipoLoja] = useState('')
   const [loading, setLoading] = useState(false)
   const [feedback, setFeedback] = useState<{ tipo: 'erro' | 'sucesso' | 'progresso'; mensagem: string } | null>(null)
@@ -117,18 +117,11 @@ export function SearchForm({ onSearchComplete }: SearchFormProps) {
           setLoading(false)
           const entregues = search.quantidade_entregue ?? 0
           const rodadas = search.num_rodadas ?? 1
-          const sufixoRodadas = rodadas > 1 ? ` (${rodadas} rodadas de busca)` : ''
-          if (entregues >= quantidadePedida) {
-            setFeedback({
-              tipo: 'sucesso',
-              mensagem: `Busca concluída! ${entregues} de ${quantidadePedida} empresas encontradas${sufixoRodadas}.`,
-            })
-          } else {
-            setFeedback({
-              tipo: 'sucesso',
-              mensagem: `Busca concluída: ${entregues} de ${quantidadePedida} empresas encontradas${sufixoRodadas}. Essa cidade pode não ter mais lojas desse tipo disponíveis no Google Maps.`,
-            })
-          }
+          const sufixoRodadas = rodadas > 1 ? ` (${rodadas} rodadas)` : ''
+          setFeedback({
+            tipo: 'sucesso',
+            mensagem: `Busca concluída! ${entregues} empresa${entregues !== 1 ? 's' : ''} encontrada${entregues !== 1 ? 's' : ''}${sufixoRodadas} e enviadas para aprovação.`,
+          })
           onSearchComplete?.()
         } else if (search.status === 'ERRO') {
           stopPolling()
@@ -158,11 +151,11 @@ export function SearchForm({ onSearchComplete }: SearchFormProps) {
       setFeedback({ tipo: 'erro', mensagem: 'Selecione o tipo de loja.' })
       return
     }
-    const qty = Number(quantidade)
-    if (!quantidade || qty < 1 || qty > 100) {
-      setFeedback({ tipo: 'erro', mensagem: 'A quantidade deve ser entre 1 e 100.' })
+    if (!faixa) {
+      setFeedback({ tipo: 'erro', mensagem: 'Selecione o volume de busca.' })
       return
     }
+    const qty = faixa === 'PEQUENA' ? 30 : faixa === 'MEDIA' ? 60 : 100
 
     stopPolling()
     setLoading(true)
@@ -170,11 +163,11 @@ export function SearchForm({ onSearchComplete }: SearchFormProps) {
       const result = await createSearch({ pais: 'Brasil', estado, cidade, quantidade: qty, tipo_loja: tipoLoja })
       setFeedback({
         tipo: 'progresso',
-        mensagem: `⏳ Buscando ${qty} empresa${qty > 1 ? 's' : ''} do tipo "${tipoLoja}" em ${cidade}... Isso pode levar alguns minutos.`,
+        mensagem: `⏳ Buscando empresas do tipo "${tipoLoja}" em ${cidade}... Isso pode levar alguns minutos.`,
       })
       setEstado('')
       setCidade('')
-      setQuantidade('')
+      setFaixa('')
       setTipoLoja('')
       startPolling(result.id, qty)
     } catch (err) {
@@ -253,17 +246,29 @@ export function SearchForm({ onSearchComplete }: SearchFormProps) {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Quantidade de empresas (1–100)</label>
-          <input
-            type="number"
-            value={quantidade}
-            onChange={(e) => setQuantidade(e.target.value)}
-            min={1}
-            max={100}
-            placeholder="Ex: 50"
-            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            disabled={loading}
-          />
+          <label className="block text-sm font-medium text-gray-700 mb-1">Volume de busca</label>
+          <div className="grid grid-cols-3 gap-2">
+            {([
+              { id: 'PEQUENA', label: 'Pequena', descricao: '~30 empresas' },
+              { id: 'MEDIA',   label: 'Média',   descricao: '~60 empresas' },
+              { id: 'GRANDE',  label: 'Grande',  descricao: '~100 empresas' },
+            ] as const).map((op) => (
+              <button
+                key={op.id}
+                type="button"
+                onClick={() => setFaixa(op.id)}
+                disabled={loading}
+                className={`border rounded-md px-3 py-2 text-sm text-center transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                  faixa === op.id
+                    ? 'border-blue-500 bg-blue-50 text-blue-700 font-medium'
+                    : 'border-gray-300 bg-white text-gray-700 hover:border-blue-400'
+                }`}
+              >
+                <div>{op.label}</div>
+                <div className="text-xs text-gray-500 mt-0.5">{op.descricao}</div>
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
