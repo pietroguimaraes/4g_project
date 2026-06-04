@@ -33,9 +33,9 @@ interface KanbanCardProps {
 }
 
 const CATEGORIA_BADGE: Record<LeadCategoria, { label: string; color: string }> = {
-  'ALIMENTÍCIO': { label: 'Alimentício', color: 'bg-blue-100 text-blue-700' },
-  'HIGIENE': { label: 'Higiene', color: 'bg-green-100 text-green-700' },
-  'LIMPEZA': { label: 'Limpeza', color: 'bg-yellow-100 text-yellow-700' },
+  'SUPERMERCADO':  { label: 'Supermercado',  color: 'bg-blue-100 text-blue-700' },
+  'ATACADISTA':    { label: 'Atacadista',    color: 'bg-green-100 text-green-700' },
+  'DISTRIBUIDORA': { label: 'Distribuidora', color: 'bg-yellow-100 text-yellow-700' },
 }
 
 function formatDate(dateStr: string) {

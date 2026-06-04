@@ -5,9 +5,9 @@ import { createSearch } from '@/lib/api/searches'
 import type { Search } from '@/types'
 
 const TIPOS_LOJA = [
-  'Distribuidoras de alimentos',
-  'Distribuidoras de higiene e limpeza',
-  'Distribuidoras de bebidas',
+  'Supermercados',
+  'Atacadistas e atacarejos',
+  'Distribuidoras',
 ]
 
 const CAPITAIS: Record<string, string> = {
