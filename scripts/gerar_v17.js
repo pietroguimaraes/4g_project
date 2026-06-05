@@ -70,36 +70,9 @@ const novoFiltrarCode = [
 filtrar.parameters.jsCode = novoFiltrarCode;
 console.log('✓ filtrar_categoria: break antecipado removido, metadados injetados');
 
-// === 3. Adicionar nó finalizar_busca ===
+// === 3. Adicionar nó finalizar_busca (SEM fetch — só limpa metadados) ===
 const finalizarCode = [
   "const items = $input.all();",
-  "const primeiroJson = items[0] ? items[0].json : {};",
-  "const quantidade_bruta = primeiroJson._meta_bruta || items.length;",
-  "const quantidade_filtrada = primeiroJson._meta_filtrada || items.length;",
-  "const quantidade_pedida = primeiroJson._meta_pedida || items.length;",
-  "const quantidade_entregue = items.length;",
-  "",
-  "// Buscar search_id do webhook original",
-  "const bodyOriginal = $('receber_busca_dashboard').first().json.body || {};",
-  "const search_id = bodyOriginal.search_id || '';",
-  "const apiKey = $env.N8N_API_KEY || '';",
-  "",
-  "// Notificar dashboard que a busca concluiu (async, nao bloqueia o fluxo)",
-  "if (search_id) {",
-  "  fetch('https://4g-project.vercel.app/api/searches/' + search_id, {",
-  "    method: 'PATCH',",
-  "    headers: {",
-  "      'Content-Type': 'application/json',",
-  "      'x-api-key': apiKey",
-  "    },",
-  "    body: JSON.stringify({",
-  "      status: 'CONCLUÍDA',",
-  "      quantidade_bruta: quantidade_bruta,",
-  "      quantidade_entregue: quantidade_entregue,",
-  "      num_rodadas: 1,",
-  "    })",
-  "  }).catch(function(e){ console.log('PATCH search falhou:', e.message); });",
-  "}",
   "",
   "// Remove campos de metadado antes de passar para code_in_java",
   "return items.map(function(item) {",
@@ -120,16 +93,55 @@ const finalizarNode = {
   name: 'finalizar_busca'
 };
 d.nodes.push(finalizarNode);
-console.log('✓ finalizar_busca: nó adicionado');
+console.log('✓ finalizar_busca: nó adicionado (sem fetch)');
 
-// === 4. Reconectar: filtrar_categoria → finalizar_busca → code_in_java ===
+// === 4. Adicionar nó patch_busca_concluida (HTTP Request nativo do n8n) ===
+// Pega o search_id do webhook e os counts de finalizar_busca
+// executeOnce: true — roda 1 vez mesmo com vários leads
+const hr6 = d.nodes.find(n => n.name === 'HTTP Request6');
+const apiKey = d.nodes.find(n => n.name === 'HTTP Request6')
+  ?.parameters?.headerParameters?.parameters?.[0]?.value || '';
+
+const patchNode = {
+  parameters: {
+    method: 'PATCH',
+    url: "={{ 'https://4g-project.vercel.app/api/searches/' + $('receber_busca_dashboard').first().json.body.search_id }}",
+    sendHeaders: true,
+    headerParameters: {
+      parameters: [
+        { name: 'x-api-key', value: apiKey },
+        { name: 'Content-Type', value: 'application/json' }
+      ]
+    },
+    sendBody: true,
+    specifyBody: 'json',
+    jsonBody: "={{ JSON.stringify({ status: 'CONCLUÍDA', quantidade_bruta: $('filtrar_categoria').first().json._meta_bruta || 0, quantidade_entregue: $('finalizar_busca').all().length, num_rodadas: 1 }) }}",
+    options: {}
+  },
+  type: 'n8n-nodes-base.httpRequest',
+  typeVersion: 4.3,
+  position: [hr6.position[0] + 280, hr6.position[1]],
+  id: 'patch-busca-concluida-v17',
+  name: 'patch_busca_concluida',
+  executeOnce: true,
+  onError: 'continueRegularOutput'
+};
+d.nodes.push(patchNode);
+console.log('✓ patch_busca_concluida: nó HTTP Request adicionado (executeOnce)');
+
+// === 5. Reconectar ===
+// filtrar_categoria → finalizar_busca → code_in_java
 d.connections['filtrar_categoria'] = {
   main: [[{ node: 'finalizar_busca', type: 'main', index: 0 }]]
 };
 d.connections['finalizar_busca'] = {
   main: [[{ node: 'code_in_java', type: 'main', index: 0 }]]
 };
-console.log('✓ conexões atualizadas: filtrar_categoria → finalizar_busca → code_in_java');
+// HTTP Request6 → patch_busca_concluida (após enviar todos os leads)
+d.connections['HTTP Request6'] = {
+  main: [[{ node: 'patch_busca_concluida', type: 'main', index: 0 }]]
+};
+console.log('✓ conexões: filtrar → finalizar → code_in_java, HTTP Request6 → patch_busca_concluida');
 
 // === 5. Salvar como v17 ===
 d.name = 'Fluxo_4g — Dashboard v2 (v17 retry)';
