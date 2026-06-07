@@ -30,6 +30,7 @@ export interface Lead {
   qtd_reengajamentos: number
   search_id?: string
   tipo_loja?: string
+  fonte_telefone?: string
   manual: boolean
   created_at: string
   updated_at: string

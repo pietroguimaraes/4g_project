@@ -10,6 +10,11 @@ const CATEGORIA_BADGE: Record<string, { label: string; color: string }> = {
   'DISTRIBUIDORA': { label: 'Distribuidora', color: 'bg-yellow-100 text-yellow-700' },
 }
 
+const FONTE_BADGE: Record<string, { label: string; color: string }> = {
+  'ia_pessoal':    { label: 'WhatsApp pessoal', color: 'bg-emerald-100 text-emerald-700' },
+  'maps_fallback': { label: 'Número comercial', color: 'bg-amber-100 text-amber-700' },
+}
+
 interface SwipeCardProps {
   lead: Lead
   onApprove: (lead: Lead) => void
@@ -57,6 +62,7 @@ export function SwipeCard({ lead, onApprove, onDiscard }: SwipeCardProps) {
   }
 
   const badge = lead.categoria ? CATEGORIA_BADGE[lead.categoria] : null
+  const fonte = lead.fonte_telefone ? FONTE_BADGE[lead.fonte_telefone] : null
 
   return (
     <div
@@ -73,11 +79,18 @@ export function SwipeCard({ lead, onApprove, onDiscard }: SwipeCardProps) {
         </span>
       )}
       <p className="font-semibold text-gray-900 text-sm truncate pr-16">{lead.empresa}</p>
-      {badge && (
-        <span className={`inline-block mt-1 text-xs px-2 py-0.5 rounded-full font-medium ${badge.color}`}>
-          {badge.label}
-        </span>
-      )}
+      <div className="flex flex-wrap gap-1 mt-1">
+        {badge && (
+          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${badge.color}`}>
+            {badge.label}
+          </span>
+        )}
+        {fonte && (
+          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${fonte.color}`}>
+            {fonte.label}
+          </span>
+        )}
+      </div>
       <p className="text-gray-500 text-xs mt-1">{lead.telefone}</p>
       {lead.cidade && (
         <p className="text-gray-400 text-xs mt-0.5">{lead.cidade}</p>
