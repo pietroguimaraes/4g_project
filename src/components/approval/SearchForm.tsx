@@ -52,6 +52,8 @@ const ESTADOS = [
   { uf: 'TO', nome: 'Tocantins' },
 ]
 
+const TRIAL_MAX = 3
+
 interface SearchFormProps {
   onSearchComplete?: () => void
 }
@@ -61,15 +63,22 @@ export function SearchForm({ onSearchComplete }: SearchFormProps) {
   const [cidade, setCidade] = useState('')
   const [cidades, setCidades] = useState<string[]>([])
   const [loadingCidades, setLoadingCidades] = useState(false)
-  const [faixa, setFaixa] = useState<'PEQUENA' | 'MEDIA' | 'GRANDE' | ''>('')
   const [tipoLoja, setTipoLoja] = useState('')
   const [loading, setLoading] = useState(false)
   const [feedback, setFeedback] = useState<{ tipo: 'erro' | 'sucesso' | 'progresso'; mensagem: string } | null>(null)
+  const [trialCount, setTrialCount] = useState<number | null>(null)
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const activeSearchRef = useRef<{ id: string; quantidade: number } | null>(null)
 
   useEffect(() => {
     return () => stopPolling()
+  }, [])
+
+  useEffect(() => {
+    fetch('/api/searches')
+      .then(r => r.json())
+      .then((d: { count: number }) => setTrialCount(d.count))
+      .catch(() => setTrialCount(0))
   }, [])
 
   useEffect(() => {
@@ -139,6 +148,8 @@ export function SearchForm({ onSearchComplete }: SearchFormProps) {
     e.preventDefault()
     setFeedback(null)
 
+    if ((trialCount ?? 0) >= TRIAL_MAX) return
+
     if (!estado) {
       setFeedback({ tipo: 'erro', mensagem: 'Selecione o estado.' })
       return
@@ -151,25 +162,20 @@ export function SearchForm({ onSearchComplete }: SearchFormProps) {
       setFeedback({ tipo: 'erro', mensagem: 'Selecione o tipo de loja.' })
       return
     }
-    if (!faixa) {
-      setFeedback({ tipo: 'erro', mensagem: 'Selecione o volume de busca.' })
-      return
-    }
-    const qty = faixa === 'PEQUENA' ? 30 : faixa === 'MEDIA' ? 60 : 100
 
     stopPolling()
     setLoading(true)
     try {
-      const result = await createSearch({ pais: 'Brasil', estado, cidade, quantidade: qty, tipo_loja: tipoLoja })
+      const result = await createSearch({ pais: 'Brasil', estado, cidade, quantidade: TRIAL_MAX, tipo_loja: tipoLoja })
+      setTrialCount(prev => (prev ?? 0) + 1)
       setFeedback({
         tipo: 'progresso',
-        mensagem: `⏳ Buscando empresas do tipo "${tipoLoja}" em ${cidade}... Isso pode levar alguns minutos.`,
+        mensagem: `Buscando empresas do tipo "${tipoLoja}" em ${cidade}... Isso pode levar alguns minutos.`,
       })
       setEstado('')
       setCidade('')
-      setFaixa('')
       setTipoLoja('')
-      startPolling(result.id, qty)
+      startPolling(result.id, TRIAL_MAX)
     } catch (err) {
       const motivo = err instanceof Error ? err.message : 'Erro desconhecido.'
       setFeedback({ tipo: 'erro', mensagem: `Não foi possível iniciar a busca. Motivo: ${motivo}` })
@@ -177,9 +183,27 @@ export function SearchForm({ onSearchComplete }: SearchFormProps) {
     }
   }
 
+  const limitReached = (trialCount ?? 0) >= TRIAL_MAX
+  const isFormDisabled = loading || loadingCidades || limitReached
+
   return (
     <form onSubmit={handleSubmit} className="bg-white rounded-lg border p-6 shadow-sm max-w-lg">
-      <h2 className="font-semibold text-gray-800 mb-4">Nova Busca de Empresas</h2>
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="font-semibold text-gray-800">Nova Busca de Empresas</h2>
+        <span className={`text-xs font-medium px-2 py-1 rounded-full ${
+          limitReached
+            ? 'bg-red-100 text-red-700'
+            : 'bg-blue-50 text-blue-700'
+        }`}>
+          {trialCount === null ? '...' : `${trialCount} de ${TRIAL_MAX} buscas usadas`}
+        </span>
+      </div>
+
+      {limitReached && (
+        <div className="mb-4 p-3 rounded-md text-sm bg-amber-50 text-amber-800 border border-amber-200">
+          Limite do período de teste atingido. Entre em contato para continuar usando o sistema.
+        </div>
+      )}
 
       <div className="grid grid-cols-1 gap-4">
         <div>
@@ -187,8 +211,8 @@ export function SearchForm({ onSearchComplete }: SearchFormProps) {
           <select
             value={estado}
             onChange={(e) => setEstado(e.target.value)}
-            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-            disabled={loading}
+            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white disabled:text-gray-400"
+            disabled={isFormDisabled}
           >
             <option value="">Selecione...</option>
             {ESTADOS.map((e) => (
@@ -203,7 +227,7 @@ export function SearchForm({ onSearchComplete }: SearchFormProps) {
             value={cidade}
             onChange={(e) => setCidade(e.target.value)}
             className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white disabled:text-gray-400"
-            disabled={loading || loadingCidades || !estado}
+            disabled={isFormDisabled || !estado}
           >
             <option value="">
               {!estado ? 'Selecione o estado primeiro' : loadingCidades ? 'Carregando cidades...' : 'Selecione...'}
@@ -235,40 +259,14 @@ export function SearchForm({ onSearchComplete }: SearchFormProps) {
           <select
             value={tipoLoja}
             onChange={(e) => setTipoLoja(e.target.value)}
-            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-            disabled={loading}
+            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white disabled:text-gray-400"
+            disabled={isFormDisabled}
           >
             <option value="">Selecione...</option>
             {TIPOS_LOJA.map((tipo) => (
               <option key={tipo} value={tipo}>{tipo}</option>
             ))}
           </select>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Volume de busca</label>
-          <div className="grid grid-cols-3 gap-2">
-            {([
-              { id: 'PEQUENA', label: 'Pequena', descricao: '~30 empresas' },
-              { id: 'MEDIA',   label: 'Média',   descricao: '~60 empresas' },
-              { id: 'GRANDE',  label: 'Grande',  descricao: '~100 empresas' },
-            ] as const).map((op) => (
-              <button
-                key={op.id}
-                type="button"
-                onClick={() => setFaixa(op.id)}
-                disabled={loading}
-                className={`border rounded-md px-3 py-2 text-sm text-center transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
-                  faixa === op.id
-                    ? 'border-blue-500 bg-blue-50 text-blue-700 font-medium'
-                    : 'border-gray-300 bg-white text-gray-700 hover:border-blue-400'
-                }`}
-              >
-                <div>{op.label}</div>
-                <div className="text-xs text-gray-500 mt-0.5">{op.descricao}</div>
-              </button>
-            ))}
-          </div>
         </div>
       </div>
 
@@ -286,10 +284,10 @@ export function SearchForm({ onSearchComplete }: SearchFormProps) {
 
       <button
         type="submit"
-        disabled={loading || loadingCidades}
+        disabled={isFormDisabled}
         className="mt-4 w-full bg-blue-600 text-white rounded-md py-2 text-sm font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
       >
-        {loading ? 'Iniciando busca...' : 'Iniciar Busca'}
+        {loading ? 'Iniciando busca...' : limitReached ? 'Limite atingido' : 'Iniciar Busca'}
       </button>
     </form>
   )

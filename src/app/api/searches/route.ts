@@ -1,12 +1,38 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
+const TRIAL_MAX_SEARCHES = 3
+const TRIAL_QUANTITY = 5
+
+export async function GET() {
+  const supabase = await createClient()
+
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  if (authError || !user) {
+    return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+  }
+
+  const { count } = await supabase
+    .from('searches')
+    .select('*', { count: 'exact', head: true })
+
+  return NextResponse.json({ count: count ?? 0 })
+}
+
 export async function POST(request: NextRequest) {
   const supabase = await createClient()
 
   const { data: { user }, error: authError } = await supabase.auth.getUser()
   if (authError || !user) {
     return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+  }
+
+  // Limite do período de teste
+  const { count: searchCount } = await supabase
+    .from('searches')
+    .select('*', { count: 'exact', head: true })
+  if ((searchCount ?? 0) >= TRIAL_MAX_SEARCHES) {
+    return NextResponse.json({ error: 'Limite de buscas do período de teste atingido.' }, { status: 403 })
   }
 
   let body: unknown
@@ -16,16 +42,14 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Body inválido' }, { status: 400 })
   }
 
-  const { pais, estado, cidade, quantidade, tipo_loja } = body as Record<string, unknown>
+  const { pais, estado, cidade, tipo_loja } = body as Record<string, unknown>
 
-  if (!pais || !estado || !cidade || quantidade === undefined || !tipo_loja) {
+  if (!pais || !estado || !cidade || !tipo_loja) {
     return NextResponse.json({ error: 'Todos os campos são obrigatórios' }, { status: 400 })
   }
 
-  const qty = Number(quantidade)
-  if (!Number.isInteger(qty) || qty < 1 || qty > 100) {
-    return NextResponse.json({ error: 'Quantidade deve ser entre 1 e 100' }, { status: 400 })
-  }
+  // Quantidade fixa no período de teste
+  const qty = TRIAL_QUANTITY
 
   const { data: search, error: dbError } = await supabase
     .from('searches')
