@@ -53,9 +53,9 @@ const ESTADOS = [
 ]
 
 const FAIXAS = [
-  { label: 'Pequena (~30 empresas)', value: 30 },
-  { label: 'Média (~60 empresas)', value: 60 },
-  { label: 'Grande (~100 empresas)', value: 100 },
+  { label: 'Pequena (~10 empresas)', value: 10 },
+  { label: 'Média (~20 empresas)', value: 20 },
+  { label: 'Grande (~30 empresas)', value: 30 },
 ]
 
 interface SearchFormProps {
