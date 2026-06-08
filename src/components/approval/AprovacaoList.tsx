@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { DndContext } from '@dnd-kit/core'
+import { DndContext, PointerSensor, TouchSensor, useSensor, useSensors } from '@dnd-kit/core'
 import { useLocalizados } from '@/hooks/useLocalizados'
 import { SwipeCard } from './SwipeCard'
 import { BulkApproveButton } from './BulkApproveButton'
@@ -9,6 +9,11 @@ import { updateLeadStatus } from '@/lib/api/leads'
 import type { Lead } from '@/types'
 
 export function AprovacaoList() {
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 100, tolerance: 5 } })
+  )
+
   const { leads: initialLeads, loading } = useLocalizados()
   const [leads, setLeads] = useState<Lead[] | null>(null)
   const [erro, setErro] = useState<string | null>(null)
@@ -65,7 +70,7 @@ export function AprovacaoList() {
       {sucesso && <p className="text-green-600 text-sm mb-3">{sucesso}</p>}
 
       {count > 0 && (
-        <DndContext>
+        <DndContext sensors={sensors}>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {displayLeads.map((lead) => (
               <SwipeCard
