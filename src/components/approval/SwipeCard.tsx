@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useDraggable } from '@dnd-kit/core'
 import type { Lead } from '@/types'
 
@@ -25,6 +25,8 @@ const THRESHOLD = 80
 
 export function SwipeCard({ lead, onApprove, onDiscard }: SwipeCardProps) {
   const [decided, setDecided] = useState(false)
+  const [tapFlash, setTapFlash] = useState<'approve' | 'discard' | null>(null)
+  const lastTapRef = useRef<{ time: number; side: 'left' | 'right' } | null>(null)
 
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: lead.telefone,
@@ -43,12 +45,34 @@ export function SwipeCard({ lead, onApprove, onDiscard }: SwipeCardProps) {
 
   let cardClass = 'bg-white border-gray-200'
   let label = ''
-  if (isApproving) {
+  if (isApproving || tapFlash === 'approve') {
     cardClass = 'bg-green-50 border-green-400'
     label = '✓ Aprovar'
-  } else if (isDiscarding) {
+  } else if (isDiscarding || tapFlash === 'discard') {
     cardClass = 'bg-red-50 border-red-400'
     label = '✗ Descartar'
+  }
+
+  function handleDoubleTap(e: React.MouseEvent<HTMLDivElement>) {
+    if (decided || isDragging) return
+    const rect = e.currentTarget.getBoundingClientRect()
+    const side = e.clientX < rect.left + rect.width / 2 ? 'left' : 'right'
+    const now = Date.now()
+
+    if (lastTapRef.current && now - lastTapRef.current.time < 350 && lastTapRef.current.side === side) {
+      lastTapRef.current = null
+      if (side === 'right') {
+        setTapFlash('approve')
+        setDecided(true)
+        setTimeout(() => onApprove(lead), 300)
+      } else {
+        setTapFlash('discard')
+        setDecided(true)
+        setTimeout(() => onDiscard(lead), 300)
+      }
+    } else {
+      lastTapRef.current = { time: now, side }
+    }
   }
 
   function handleDragEnd() {
@@ -71,6 +95,7 @@ export function SwipeCard({ lead, onApprove, onDiscard }: SwipeCardProps) {
       {...listeners}
       {...attributes}
       onPointerUp={handleDragEnd}
+      onClick={handleDoubleTap}
       className={`relative rounded-lg border-2 p-4 shadow-sm cursor-grab active:cursor-grabbing select-none transition-colors ${cardClass}`}
     >
       {label && (
@@ -95,7 +120,7 @@ export function SwipeCard({ lead, onApprove, onDiscard }: SwipeCardProps) {
       {lead.cidade && (
         <p className="text-gray-400 text-xs mt-0.5">{lead.cidade}</p>
       )}
-      <p className="text-gray-300 text-xs mt-2">← descartar · aprovar →</p>
+      <p className="text-gray-300 text-xs mt-2">← descartar · aprovar → <span className="sm:hidden">(duplo toque)</span></p>
     </div>
   )
 }
