@@ -1,0 +1,30 @@
+handoff:
+  from_agent: dev
+  to_agent: devops
+  consumed: true
+
+  story_context:
+    story_id: fix-agente-lucas-memoria
+    story_status: InProgress
+    current_task: push para GitHub e deploy na Vercel
+    branch: main
+
+  decisions:
+    - Rota GET /api/leads/[telefone]/messages modificada para aceitar x-api-key (n8n)
+    - Commit 4eb7dcc já feito localmente, aguarda push
+
+  files_modified:
+    - src/app/api/leads/[telefone]/messages/route.ts
+
+  blockers: []
+
+  next_action: |
+    Fazer git push origin main para enviar o commit 4eb7dcc ao GitHub.
+    A Vercel fará o deploy automaticamente após o push.
+    Após confirmar o deploy, retornar ao @dev para finalizar.
+
+  return_to_dev: |
+    Após o push + deploy confirmado, avisar o Pietro para:
+    1. Importar Fluxo_4g_v38_memoria_persistente.json no n8n
+    2. Confirmar que o agente Lucas está respondendo corretamente
+    O @dev está aguardando essa confirmação para encerrar a sessão.

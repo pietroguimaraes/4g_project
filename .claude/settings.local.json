@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node:*)",
+      "WebFetch(domain:apify.com)",
+      "WebSearch",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:use-apify.com)",
+      "WebFetch(domain:developers.google.com)",
+      "WebFetch(domain:outscraper.com)",
+      "WebFetch(domain:blog.apify.com)",
+      "WebFetch(domain:www.answeroverflow.com)",
+      "WebFetch(domain:raw.githubusercontent.com)"
+    ]
+  }
+}
