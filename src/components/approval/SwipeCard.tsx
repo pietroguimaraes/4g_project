@@ -117,6 +117,9 @@ export function SwipeCard({ lead, onApprove, onDiscard }: SwipeCardProps) {
         )}
       </div>
       <p className="text-gray-500 text-xs mt-1">{lead.telefone}</p>
+      {lead.email && (
+        <p className="text-blue-500 text-xs mt-0.5">{lead.email}</p>
+      )}
       {lead.cidade && (
         <p className="text-gray-400 text-xs mt-0.5">{lead.cidade}</p>
       )}

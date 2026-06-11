@@ -17,6 +17,7 @@ export interface Lead {
   id: string
   empresa: string
   telefone: string
+  email?: string
   website?: string
   cidade?: string
   estado?: string

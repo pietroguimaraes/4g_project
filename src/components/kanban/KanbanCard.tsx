@@ -193,6 +193,10 @@ export function KanbanCard({ lead, borderColor, onDeleted, isPequenos }: KanbanC
             <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
               <span className="text-gray-500">Telefone</span>
               <span className="text-gray-800">{lead.telefone}</span>
+              {lead.email && <>
+                <span className="text-gray-500">Email</span>
+                <span className="text-blue-600 truncate">{lead.email}</span>
+              </>}
               {lead.website && <>
                 <span className="text-gray-500">Website</span>
                 <span className="text-gray-800 truncate">{lead.website}</span>
