@@ -78,9 +78,16 @@ export function SearchForm({ onSearchComplete }: SearchFormProps) {
     return () => stopPolling()
   }, [])
 
+  const cidadesCache = useRef<Record<string, string[]>>({})
+
   useEffect(() => {
     if (!estado) {
       setCidades([])
+      setCidade('')
+      return
+    }
+    if (cidadesCache.current[estado]) {
+      setCidades(cidadesCache.current[estado])
       setCidade('')
       return
     }
@@ -88,7 +95,11 @@ export function SearchForm({ onSearchComplete }: SearchFormProps) {
     setCidade('')
     fetch(`https://servicodados.ibge.gov.br/api/v1/localidades/estados/${estado}/municipios?orderBy=nome`)
       .then(r => r.json())
-      .then((data: { nome: string }[]) => setCidades(data.map(m => m.nome)))
+      .then((data: { nome: string }[]) => {
+        const nomes = data.map(m => m.nome)
+        cidadesCache.current[estado] = nomes
+        setCidades(nomes)
+      })
       .catch(() => setCidades([]))
       .finally(() => setLoadingCidades(false))
   }, [estado])
@@ -202,7 +213,9 @@ export function SearchForm({ onSearchComplete }: SearchFormProps) {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Cidade</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Cidade {loadingCidades && <span className="text-blue-500 font-normal">(carregando...)</span>}
+          </label>
           <select
             value={cidade}
             onChange={(e) => setCidade(e.target.value)}
