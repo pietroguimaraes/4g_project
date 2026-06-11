@@ -1,0 +1,38 @@
+handoff:
+  from_agent: aios-master
+  to_agent: devops
+  consumed: true
+
+  story_context:
+    story_id: demo-victor-pizza
+    story_status: InProgress
+    current_task: push branch + configurar Vercel preview
+    branch: demo-victor-pizza
+
+  decisions:
+    - Branch demo-victor-pizza criada com commit af23326
+    - Supabase reutiliza demo-b2b (tuctjosvxdzbfnyvvodc) para a demo
+    - Após Victor fechar contrato separar em projeto novo
+    - Email field adicionado (migration 018)
+    - Trial limits removidos nesta branch
+
+  files_modified:
+    - supabase/migrations/018_victor_pizza.sql
+    - src/types/index.ts
+    - src/components/approval/SearchForm.tsx
+    - src/components/approval/SwipeCard.tsx
+    - src/components/kanban/KanbanCard.tsx
+    - src/app/(dashboard)/aprovacao/page.tsx
+    - scripts/gerar_victor_pizza_v1.js
+    - scripts/dados_demo_victor_pizza.sql
+
+  blockers: []
+
+  next_action: |
+    1. git push origin demo-victor-pizza
+    2. Vercel: confirmar preview deploy ficou verde
+    3. Pegar URL do preview e passar para Pietro
+    4. Pietro cria login victor@demo.com no Supabase demo-b2b
+    5. Pietro roda dados_demo_victor_pizza.sql trocando <USER_ID_VICTOR_DEMO>
+    6. Pietro gera Fluxo_victor_pizza_v1.json rodando gerar_victor_pizza_v1.js
+       (precisa do Fluxo_oriental_limpeza_v11.json em Downloads)

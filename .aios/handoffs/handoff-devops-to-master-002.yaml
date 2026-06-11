@@ -1,0 +1,51 @@
+handoff:
+  from_agent: devops
+  to_agent: aios-master
+  consumed: true
+
+  story_context:
+    story_id: demo-victor-pizza
+    story_status: InProgress
+    current_task: configuração pós-push + ensaio da demo
+    branch: demo-victor-pizza
+
+  decisions:
+    - Push feito com sucesso — branch demo-victor-pizza no GitHub (commit af23326)
+    - Vercel fará preview deploy automático (projeto distribuidora-b2b conectado ao GitHub)
+    - URL esperada: distribuidora-b2b-git-demo-victor-pizza-pietroguimaraes-projects.vercel.app
+    - Supabase continua sendo o demo-b2b (tuctjosvxdzbfnyvvodc) para a demo
+    - n8n flow ainda não gerado nem importado
+
+  pendencias_tecnicas_pietro:
+    - passo_1: Confirmar preview URL no dashboard Vercel (vercel.com/pietroguimaraes-projects/distribuidora-b2b)
+    - passo_2: Criar usuário victor@demo.com / victor123 no Supabase demo-b2b → copiar UUID
+    - passo_3: Rodar scripts/dados_demo_victor_pizza.sql no Supabase SQL Editor (substituir <USER_ID_VICTOR_DEMO>)
+    - passo_4: Rodar "node scripts/gerar_victor_pizza_v1.js" no terminal (precisa Fluxo_oriental_limpeza_v11.json em Downloads)
+    - passo_5: Importar Fluxo_victor_pizza_v1.json no n8n
+    - passo_6: Substituir SUA_CHAVE_OPENAI_AQUI no nó enriquecer_leads do fluxo importado
+
+  pendencias_pre_demo:
+    - passo_7: Login victor@demo.com na URL preview → verificar 15 leads carregados
+    - passo_8: Fazer 1 busca ao vivo de teste ("Supermercados" em São Paulo)
+    - passo_9: Ensaiar roteiro da demo 2x (meta: menos de 8 minutos)
+
+  roteiro_demo:
+    duracao_alvo: 8 minutos
+    script:
+      - Entrar no dashboard → painel limpo
+      - Fazer busca ao vivo "Supermercados SP" → leads chegam
+      - Aprovar 3 leads → vão para o Kanban
+      - Mostrar email nos cards (diferencial vs Ramper)
+      - Mostrar tela n8n com schedule configurado
+      - Explicar: "isso roda sozinho todo dia, você recebe resumo no WhatsApp"
+    frase_fechamento: |
+      "Victor, isso que você viu é para a empresa de pizza.
+      Se fechar, configuramos as outras 5 em paralelo, cada uma rodando automaticamente.
+      Você só abre o app de manhã e vê os leads do dia."
+
+  blockers: []
+
+  next_action: |
+    Conduzir Pietro passo a passo pelos 9 passos acima.
+    Começar pelo passo 1 (Vercel) e ir avançando conforme Pietro confirma cada etapa.
+    Orion deve agir como guia interativo — um passo de cada vez.

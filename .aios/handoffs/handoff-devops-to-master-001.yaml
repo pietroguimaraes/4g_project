@@ -1,0 +1,32 @@
+handoff:
+  from_agent: devops
+  to_agent: aios-master
+  consumed: true
+
+  story_context:
+    story_id: demo-victor-oriental-limpeza
+    story_status: Done
+    current_task: demo pronta para Victor
+    branch: cliente-oriental-limpeza
+
+  decisions:
+    - Chave OpenAI removida dos scripts v9/v10/v11 e histórico reescrito (force push)
+    - Faixas de busca ajustadas para 10/20/30 empresas
+    - Trial limits removidos (sem limite de buscas, quantidade via seletor)
+    - Modal de boas-vindas do trial removido
+    - Usuário teste@gmail.com / 1234 criado no Supabase (apenas para demo Victor)
+
+  files_modified:
+    - src/components/approval/SearchForm.tsx
+    - src/app/api/searches/route.ts
+    - src/app/(dashboard)/aprovacao/page.tsx
+    - scripts/gerar_oriental_limpeza_v9.js
+    - scripts/gerar_oriental_limpeza_v10.js
+    - scripts/gerar_oriental_limpeza_v11.js
+
+  blockers: []
+
+  next_action: |
+    Aguardar ligação do Victor (Selfe Corp).
+    Após demo: decidir entre reverter trial limits para Reinan
+    ou manter sistema aberto dependendo do desfecho das duas vendas.
