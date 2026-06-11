@@ -10,7 +10,7 @@ export default function DashboardLayout({
     <div className="min-h-screen bg-gray-50">
       <nav className="bg-white border-b px-6 py-3 flex items-center justify-between">
         <div className="flex items-center gap-8">
-          <span className="font-bold text-lg text-gray-900">Oriental Limpeza</span>
+          <span className="font-bold text-lg text-gray-900">Victor Pizza</span>
           <div className="flex gap-4">
             <Link
               href="/aprovacao"
