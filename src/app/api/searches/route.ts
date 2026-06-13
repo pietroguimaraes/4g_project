@@ -1,9 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
-const TRIAL_MAX_SEARCHES = 3
-const TRIAL_QUANTITY = 5
-
 export async function GET() {
   const supabase = await createClient()
 
@@ -27,14 +24,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
   }
 
-  // Limite do período de teste
-  const { count: searchCount } = await supabase
-    .from('searches')
-    .select('*', { count: 'exact', head: true })
-  if ((searchCount ?? 0) >= TRIAL_MAX_SEARCHES) {
-    return NextResponse.json({ error: 'Limite de buscas do período de teste atingido.' }, { status: 403 })
-  }
-
   let body: unknown
   try {
     body = await request.json()
@@ -42,14 +31,13 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Body inválido' }, { status: 400 })
   }
 
-  const { pais, estado, cidade, tipo_loja } = body as Record<string, unknown>
+  const { pais, estado, cidade, tipo_loja, quantidade } = body as Record<string, unknown>
 
   if (!pais || !estado || !cidade || !tipo_loja) {
     return NextResponse.json({ error: 'Todos os campos são obrigatórios' }, { status: 400 })
   }
 
-  // Quantidade fixa no período de teste
-  const qty = TRIAL_QUANTITY
+  const qty = quantidade ? Number(quantidade) : 10
 
   const { data: search, error: dbError } = await supabase
     .from('searches')
