@@ -69,12 +69,12 @@ function normalizarCelular(area, number) {
 async function existeNoWhatsApp(cel) {
   const phone = '55' + cel;
   try {
-    const r = await $helpers.httpRequest({
+    const _r1 = await fetch(UAZAPI_URL + '/contact/check-whatsapp', {
       method: 'POST',
-      url: \`\${UAZAPI_URL}/contact/check-whatsapp\`,
       headers: { 'token': UAZAPI_TOKEN, 'Content-Type': 'application/json' },
       body: JSON.stringify({ phone }),
     });
+    const r = await _r1.json();
     return r.exists === true;
   } catch(e) { return true; }
 }
@@ -83,10 +83,10 @@ async function existeNoWhatsApp(cel) {
 async function buscarCodigoIBGE(estado, cidade) {
   if (!cidade) return null;
   try {
-    const municipios = await $helpers.httpRequest({
-      method: 'GET',
-      url: \`https://servicodados.ibge.gov.br/api/v1/localidades/estados/\${estado}/municipios\`,
-    });
+    const _r2 = await fetch('https://servicodados.ibge.gov.br/api/v1/localidades/estados/' + estado + '/municipios');
+    const municipios = await _r2.json();
+
+
     const normalizar = s => s.toLowerCase().normalize('NFD').replace(/[\\u0300-\\u036f]/g, '');
     const match = municipios.find(m => normalizar(m.nome) === normalizar(cidade));
     return match?.id || null;
@@ -104,11 +104,11 @@ async function buscarCNPJa(estado, municipioId, cnaes, quantidade) {
   parts.push('names.nin=' + encodeURIComponent(BLACKLIST_API));
   parts.push('limit=' + String(Math.min(quantidade * 5, 100)));
 
-  const r = await $helpers.httpRequest({
-    method: 'GET',
-    url: \`https://api.cnpja.com/office?\${parts.join('&')}\`,
+
+  const _r3 = await fetch('https://api.cnpja.com/office?' + parts.join('&'), {
+    headers: { 'Authorization': CNPJA_KEY },
   });
-  return r.records || [];
+  const r = await _r3.json();
 }
 
 // ── Pipeline principal ────────────────────────────────────────────────────────
