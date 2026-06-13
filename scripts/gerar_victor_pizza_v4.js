@@ -95,19 +95,19 @@ async function buscarCodigoIBGE(estado, cidade) {
 
 // Busca leads no CNPJá
 async function buscarCNPJa(estado, municipioId, cnaes, quantidade) {
-  const params = new URLSearchParams();
-  params.append('mainActivity.id.in', cnaes.join(','));
-  params.append('address.state.in', estado);
-  if (municipioId) params.append('address.municipality.in', String(municipioId));
-  params.append('status.id.in', '2');          // Ativa
-  params.append('phones.ex', 'true');           // Tem telefone
-  params.append('names.nin', BLACKLIST_API);     // Blacklist nativa
-  params.append('limit', String(Math.min(quantidade * 5, 100))); // Buffer 5x
+async function buscarCNPJa(estado, municipioId, cnaes, quantidade) {
+  const parts = [];
+  parts.push('mainActivity.id.in=' + encodeURIComponent(cnaes.join(',')));
+  parts.push('address.state.in=' + encodeURIComponent(estado));
+  if (municipioId) parts.push('address.municipality.in=' + encodeURIComponent(String(municipioId)));
+  parts.push('status.id.in=2');
+  parts.push('phones.ex=true');
+  parts.push('names.nin=' + encodeURIComponent(BLACKLIST_API));
+  parts.push('limit=' + String(Math.min(quantidade * 5, 100)));
 
   const r = await $helpers.httpRequest({
     method: 'GET',
-    url: \`https://api.cnpja.com/office?\${params.toString()}\`,
-    headers: { 'Authorization': CNPJA_KEY },
+    url: \`https://api.cnpja.com/office?\${parts.join('&')}\`,
   });
   return r.records || [];
 }
