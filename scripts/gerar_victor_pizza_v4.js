@@ -1,227 +1,213 @@
 const fs = require('fs');
 
-// v4: substitui Apify + OpenAI pelo CNPJá (Receita Federal)
-// Pipeline novo: CNPJá (CNAE + estado + cidade) → email incluso → UazAPI WhatsApp check
 const INPUT  = 'C:/Users/guima/Downloads/Fluxo_oriental_limpeza_v11.json';
 const OUTPUT = 'C:/Users/guima/Downloads/Fluxo_victor_pizza_v4.json';
 
 const d = JSON.parse(fs.readFileSync(INPUT, 'utf8'));
 
-// ─── 1. Nome ──────────────────────────────────────────────────────────────────
 d.name = 'Fluxo Victor Pizza v4 — CNPJá (Receita Federal) substitui Apify + OpenAI';
 console.log('✓ Nome atualizado');
 
-// ─── 2. enriquecer_leads: CNPJá como fonte principal ─────────────────────────
-const enriquece = d.nodes.find(n => n.name === 'enriquecer_leads');
+const enriquece = d.nodes.find(function(n){ return n.name === 'enriquecer_leads'; });
 if (!enriquece) { console.error('✗ nó enriquecer_leads não encontrado'); process.exit(1); }
 
-enriquece.parameters.jsCode = `// v4-victor-pizza — CNPJá como fonte (Receita Federal)
-// Substitui Apify + OpenAI. Pipeline: CNAE + estado + cidade → leads com email + telefone → UazAPI
+// jsCode construído como array de linhas — sem template literal externo (sem problema de escaping)
+var L = [];
+L.push("// v4-victor-pizza — CNPJá como fonte (Receita Federal)");
+L.push("// Pipeline: CNAE + estado + cidade -> leads com email + telefone -> UazAPI");
+L.push("");
+L.push("const CNPJA_KEY    = 'SUA_CHAVE_CNPJA_AQUI';");
+L.push("const UAZAPI_URL   = 'https://secondbrain.uazapi.com';");
+L.push("const UAZAPI_TOKEN = '6781e300-9cfe-4d72-9195-aff89f807be2';");
+L.push("");
+L.push("const webhook = $('receber_busca_dashboard').first().json;");
+L.push("const body = webhook.body || webhook;");
+L.push("const estado            = body.estado      || 'SP';");
+L.push("const cidade            = body.cidade      || '';");
+L.push("const tipo_loja         = body.tipo_loja   || 'Supermercados';");
+L.push("const quantidade_pedida = parseInt(body.quantidade || 10);");
+L.push("const search_id         = body.search_id   || '';");
+L.push("");
+L.push("const CNAE_MAP = {");
+L.push("  'Supermercados':    [4711302],");
+L.push("  'Hipermercados':    [4711301],");
+L.push("  'Redes de mercado': [4711302, 4711301],");
+L.push("};");
+L.push("const cnaes = CNAE_MAP[tipo_loja] || [4711302];");
+L.push("");
+L.push("const BLACKLIST_API = [");
+L.push("  'mercearia','mercadinho','padaria','mini mercado',");
+L.push("  'hortifruti','quitanda','frutaria',");
+L.push("  'restaurante','lanchonete','pizzaria',");
+L.push("  'farmacia','farmácia','acougue','açougue','petshop','pet shop',");
+L.push("].join(',');");
+L.push("");
+L.push("function normalizarCelular(area, number) {");
+L.push("  if (!area || !number) return null;");
+L.push("  var d = String(area) + String(number).replace(/\\D/g, '');");
+L.push("  if (d.startsWith('55') && d.length >= 12) d = d.substring(2);");
+L.push("  if (d.length === 10) {");
+L.push("    var t = d.charAt(2);");
+L.push("    if (['6','7','8','9'].indexOf(t) >= 0) d = d.substring(0,2) + '9' + d.substring(2);");
+L.push("    else return null;");
+L.push("  }");
+L.push("  if (d.length !== 11) return null;");
+L.push("  if (d.charAt(2) !== '9') return null;");
+L.push("  var ddd = parseInt(d.substring(0,2));");
+L.push("  if (ddd < 11 || ddd > 99) return null;");
+L.push("  return d;");
+L.push("}");
+L.push("");
+L.push("async function existeNoWhatsApp(cel) {");
+L.push("  var phone = '55' + cel;");
+L.push("  try {");
+L.push("    var r = await $helpers.httpRequest({");
+L.push("      method: 'POST',");
+L.push("      url: UAZAPI_URL + '/contact/check-whatsapp',");
+L.push("      headers: { token: UAZAPI_TOKEN, 'Content-Type': 'application/json' },");
+L.push("      body: JSON.stringify({ phone: phone }),");
+L.push("    });");
+L.push("    return r.exists === true;");
+L.push("  } catch(e) { return true; }");
+L.push("}");
+L.push("");
+L.push("async function buscarCodigoIBGE(uf, nomeCidade) {");
+L.push("  if (!nomeCidade) return null;");
+L.push("  try {");
+L.push("    var municipios = await $helpers.httpRequest({");
+L.push("      method: 'GET',");
+L.push("      url: 'https://servicodados.ibge.gov.br/api/v1/localidades/estados/' + uf + '/municipios',");
+L.push("    });");
+L.push("    var norm = function(s) { return s.toLowerCase().normalize('NFD').replace(/[\\u0300-\\u036f]/g, ''); };");
+L.push("    var found = municipios.filter(function(m) { return norm(m.nome) === norm(nomeCidade); })[0];");
+L.push("    return found ? found.id : null;");
+L.push("  } catch(e) { return null; }");
+L.push("}");
+L.push("");
+L.push("async function buscarCNPJa(uf, municipioId, cnaes, quantidade) {");
+L.push("  var parts = [];");
+L.push("  parts.push('mainActivity.id.in=' + encodeURIComponent(cnaes.join(',')));");
+L.push("  parts.push('address.state.in=' + encodeURIComponent(uf));");
+L.push("  if (municipioId) parts.push('address.municipality.in=' + encodeURIComponent(String(municipioId)));");
+L.push("  parts.push('status.id.in=2');");
+L.push("  parts.push('phones.ex=true');");
+L.push("  parts.push('names.nin=' + encodeURIComponent(BLACKLIST_API));");
+L.push("  parts.push('limit=' + String(Math.min(quantidade * 5, 100)));");
+L.push("  var r = await $helpers.httpRequest({");
+L.push("    method: 'GET',");
+L.push("    url: 'https://api.cnpja.com/office?' + parts.join('&'),");
+L.push("    headers: { Authorization: CNPJA_KEY },");
+L.push("  });");
+L.push("  return r.records || [];");
+L.push("}");
+L.push("");
+L.push("var municipioId = await buscarCodigoIBGE(estado, cidade);");
+L.push("var registros   = await buscarCNPJa(estado, municipioId, cnaes, quantidade_pedida);");
+L.push("var validos     = [];");
+L.push("");
+L.push("for (var i = 0; i < registros.length; i++) {");
+L.push("  var reg = registros[i];");
+L.push("  var nome = reg.alias || (reg.company && reg.company.name) || '';");
+L.push("  if (!nome) continue;");
+L.push("  var emails   = reg.emails || [];");
+L.push("  var emailObj = emails.filter(function(e){ return e.ownership === 'CORPORATE'; })[0]");
+L.push("              || emails.filter(function(e){ return e.ownership === 'PERSONAL';  })[0];");
+L.push("  var email    = emailObj ? emailObj.address : null;");
+L.push("  var phones   = reg.phones || [];");
+L.push("  var phoneObj = phones.filter(function(p){ return p.type === 'MOBILE';   })[0]");
+L.push("              || phones.filter(function(p){ return p.type === 'LANDLINE'; })[0];");
+L.push("  if (!phoneObj) continue;");
+L.push("  var cel = normalizarCelular(phoneObj.area, phoneObj.number);");
+L.push("  if (!cel) continue;");
+L.push("  var temWA = await existeNoWhatsApp(cel);");
+L.push("  if (!temWA) continue;");
+L.push("  var addr = [");
+L.push("    reg.address && reg.address.street,");
+L.push("    reg.address && reg.address.number,");
+L.push("    reg.address && reg.address.district");
+L.push("  ].filter(Boolean).join(', ');");
+L.push("  validos.push({");
+L.push("    title:            nome,");
+L.push("    empresa:          nome,");
+L.push("    city:             (reg.address && reg.address.city)  || cidade,");
+L.push("    cidade:           (reg.address && reg.address.city)  || cidade,");
+L.push("    state:            (reg.address && reg.address.state) || estado,");
+L.push("    address:          addr,");
+L.push("    phone:            cel,");
+L.push("    phoneUnformatted: '55' + cel,");
+L.push("    _email:           email,");
+L.push("    _cnpj:            reg.taxId,");
+L.push("    _fonte_telefone:  phoneObj.type === 'MOBILE' ? 'receita_federal_mobile' : 'receita_federal_fixo',");
+L.push("    _prioridade:      0,");
+L.push("    quantidade_pedida: quantidade_pedida,");
+L.push("  });");
+L.push("  if (validos.length >= quantidade_pedida * 2) break;");
+L.push("}");
+L.push("");
+L.push("if (validos.length === 0) {");
+L.push("  return [{ json: { _sem_resultado: true, _meta_bruta: registros.length, _meta_filtrada: 0 } }];");
+L.push("}");
+L.push("return validos.map(function(item, idx) {");
+L.push("  var out = {};");
+L.push("  for (var k in item) out[k] = item[k];");
+L.push("  if (idx === 0) { out._meta_bruta = registros.length; out._meta_filtrada = validos.length; }");
+L.push("  return { json: out };");
+L.push("});");
 
-const CNPJA_KEY    = 'SUA_CHAVE_CNPJA_AQUI';
-const UAZAPI_URL   = 'https://secondbrain.uazapi.com';
-const UAZAPI_TOKEN = '6781e300-9cfe-4d72-9195-aff89f807be2';
+const jsCode = L.join('\n');
 
-// Lê dados direto do webhook (ignora input do Apify)
-const webhook = $('receber_busca_dashboard').first().json;
-const body = webhook.body || webhook;
-const estado       = body.estado      || 'SP';
-const cidade       = body.cidade      || '';
-const tipo_loja    = body.tipo_loja   || 'Supermercados';
-const quantidade_pedida = parseInt(body.quantidade || 10);
-const search_id    = body.search_id   || '';
-
-// Mapeia tipo_loja → CNAE numérico (IBGE)
-const CNAE_MAP = {
-  'Supermercados':    [4711302],
-  'Hipermercados':    [4711301],
-  'Redes de mercado': [4711302, 4711301],
-};
-const cnaes = CNAE_MAP[tipo_loja] || [4711302];
-
-// Blacklist nativa (passada para API — evita custo com termos errados)
-const BLACKLIST_API = [
-  'mercearia', 'mercadinho', 'padaria', 'mini mercado',
-  'hortifruti', 'quitanda', 'frutaria',
-  'restaurante', 'lanchonete', 'pizzaria',
-  'farmacia', 'farmácia', 'acougue', 'açougue',
-  'petshop', 'pet shop',
-].join(',');
-
-// ── Funções ───────────────────────────────────────────────────────────────────
-
-function normalizarCelular(area, number) {
-  if (!area || !number) return null;
-  let d = String(area) + String(number).replace(/\\\\D/g, '');
-  if (d.startsWith('55') && d.length >= 12) d = d.substring(2);
-  if (d.length === 10) {
-    const t = d.charAt(2);
-    if (['6','7','8','9'].includes(t)) d = d.substring(0,2) + '9' + d.substring(2);
-    else return null;
-  }
-  if (d.length !== 11) return null;
-  if (d.charAt(2) !== '9') return null;
-  const ddd = parseInt(d.substring(0,2));
-  if (ddd < 11 || ddd > 99) return null;
-  return d;
+// ── Validação sintática ────────────────────────────────────────────────────────
+try {
+  new Function('return async function() { ' + jsCode + ' }');
+  console.log('✓ Sintaxe JavaScript válida');
+} catch(e) {
+  console.error('✗ ERRO DE SINTAXE:', e.message);
+  process.exit(1);
 }
 
-async function existeNoWhatsApp(cel) {
-  const phone = '55' + cel;
-  try {
-    const _r1 = await fetch(UAZAPI_URL + '/contact/check-whatsapp', {
-      method: 'POST',
-      headers: { 'token': UAZAPI_TOKEN, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ phone }),
-    });
-    const r = await _r1.json();
-    return r.exists === true;
-  } catch(e) { return true; }
-}
+// ── Checklist ─────────────────────────────────────────────────────────────────
+const checks = [
+  ['Sem backtick',       !jsCode.includes('`')],
+  ['Sem ${',            !jsCode.includes('${')],
+  ['$helpers presente', jsCode.includes('$helpers.httpRequest')],
+  ['CNPJá endpoint',    jsCode.includes('api.cnpja.com')],
+  ['IBGE endpoint',     jsCode.includes('servicodados.ibge')],
+  ['WhatsApp check',    jsCode.includes('check-whatsapp')],
+  ['Email extraction',  jsCode.includes('CORPORATE')],
+  ['encodeURIComponent',jsCode.includes('encodeURIComponent')],
+];
+checks.forEach(function(c) { console.log((c[1] ? '✓' : '✗') + ' ' + c[0]); });
 
-// Busca código IBGE da cidade para filtro preciso
-async function buscarCodigoIBGE(estado, cidade) {
-  if (!cidade) return null;
-  try {
-    const _r2 = await fetch('https://servicodados.ibge.gov.br/api/v1/localidades/estados/' + estado + '/municipios');
-    const municipios = await _r2.json();
+// ── Aplica no JSON ────────────────────────────────────────────────────────────
+enriquece.parameters.jsCode = jsCode;
 
-
-    const normalizar = s => s.toLowerCase().normalize('NFD').replace(/[\\u0300-\\u036f]/g, '');
-    const match = municipios.find(m => normalizar(m.nome) === normalizar(cidade));
-    return match?.id || null;
-  } catch(e) { return null; }
-}
-
-// Busca leads no CNPJá
-async function buscarCNPJa(estado, municipioId, cnaes, quantidade) {
-  const parts = [];
-  parts.push('mainActivity.id.in=' + encodeURIComponent(cnaes.join(',')));
-  parts.push('address.state.in=' + encodeURIComponent(estado));
-  if (municipioId) parts.push('address.municipality.in=' + encodeURIComponent(String(municipioId)));
-  parts.push('status.id.in=2');
-  parts.push('phones.ex=true');
-  parts.push('names.nin=' + encodeURIComponent(BLACKLIST_API));
-  parts.push('limit=' + String(Math.min(quantidade * 5, 100)));
-
-
-  const _r3 = await fetch('https://api.cnpja.com/office?' + parts.join('&'), {
-    headers: { 'Authorization': CNPJA_KEY },
-  });
-  const r = await _r3.json();
-}
-
-// ── Pipeline principal ────────────────────────────────────────────────────────
-
-const municipioId = await buscarCodigoIBGE(estado, cidade);
-const registros = await buscarCNPJa(estado, municipioId, cnaes, quantidade_pedida);
-
-const validos = [];
-
-for (const reg of registros) {
-  const nome = reg.alias || reg.company?.name || '';
-  if (!nome) continue;
-
-  // Email: corporativo > pessoal (ignora contabilidade)
-  const emails = reg.emails || [];
-  const email = (
-    emails.find(e => e.ownership === 'CORPORATE') ||
-    emails.find(e => e.ownership === 'PERSONAL')
-  )?.address || null;
-
-  // Telefone: móvel preferencial > fixo
-  const phones = reg.phones || [];
-  const phone = phones.find(p => p.type === 'MOBILE') || phones.find(p => p.type === 'LANDLINE');
-  if (!phone) continue;
-
-  const cel = normalizarCelular(phone.area, phone.number);
-  if (!cel) continue;
-
-  const temWhatsApp = await existeNoWhatsApp(cel);
-  if (!temWhatsApp) continue;
-
-  validos.push({
-    title:            nome,
-    empresa:          nome,
-    city:             reg.address?.city  || cidade,
-    cidade:           reg.address?.city  || cidade,
-    state:            reg.address?.state || estado,
-    address:          [reg.address?.street, reg.address?.number, reg.address?.district].filter(Boolean).join(', '),
-    phone:            cel,
-    phoneUnformatted: '55' + cel,
-    _email:           email,
-    _cnpj:            reg.taxId,
-    _fonte_telefone:  phone.type === 'MOBILE' ? 'receita_federal_mobile' : 'receita_federal_fixo',
-    _prioridade:      0,
-    quantidade_pedida,
-  });
-
-  // Buffer 2x (metade vai para leads, metade para reserva)
-  if (validos.length >= quantidade_pedida * 2) break;
-}
-
-if (validos.length === 0) {
-  return [{ json: { _sem_resultado: true, _meta_bruta: registros.length, _meta_filtrada: 0 } }];
-}
-
-return validos.map((item, idx) => ({
-  json: {
-    ...item,
-    _meta_bruta:    idx === 0 ? registros.length : undefined,
-    _meta_filtrada: idx === 0 ? validos.length   : undefined,
-  }
-}));
-`;
-
-console.log('✓ enriquecer_leads v4: CNPJá (Receita Federal) configurado');
-
-// ─── 3. Reconectar verificar_reserva → enriquecer_leads (pula Apify) ─────────
-// Encontra o nó que faz o roteamento FALSE (sem reserva suficiente)
-const rotaNomes = ['verificar_reserva', 'reserva_suficiente', 'Switch', 'IF'];
-let reconectado = false;
-
-for (const nomeNo of rotaNomes) {
-  const conn = d.connections[nomeNo];
-  if (!conn?.main) continue;
-
-  // Procura o output que vai para definir_termos ou para Apify
-  for (let outputIdx = 0; outputIdx < conn.main.length; outputIdx++) {
-    const outputs = conn.main[outputIdx];
+// Reconecta verificar_reserva → enriquecer_leads (bypassa Apify)
+var nomes = ['verificar_reserva', 'reserva_suficiente', 'Switch', 'IF'];
+var reconectado = false;
+for (var ni = 0; ni < nomes.length; ni++) {
+  var conn = d.connections[nomes[ni]];
+  if (!conn || !conn.main) continue;
+  for (var oi = 0; oi < conn.main.length; oi++) {
+    var outputs = conn.main[oi];
     if (!outputs) continue;
-
-    const temApify = outputs.some(c =>
-      c.node && (
-        c.node.toLowerCase().includes('definir') ||
-        c.node.toLowerCase().includes('apify') ||
-        c.node.toLowerCase().includes('actor') ||
-        c.node.toLowerCase().includes('busca')
-      )
-    );
-
+    var temApify = outputs.some(function(c){ return c.node && (c.node.toLowerCase().includes('definir') || c.node.toLowerCase().includes('apify') || c.node.toLowerCase().includes('busca')); });
     if (temApify) {
-      const original = outputs.map(c => c.node).join(', ');
-      d.connections[nomeNo].main[outputIdx] = [
-        { node: 'enriquecer_leads', type: 'main', index: 0 }
-      ];
-      console.log(`✓ Reconectado: ${nomeNo}[${outputIdx}] → enriquecer_leads (era: ${original})`);
+      d.connections[nomes[ni]].main[oi] = [{ node: 'enriquecer_leads', type: 'main', index: 0 }];
+      console.log('✓ Reconectado: ' + nomes[ni] + '[' + oi + '] → enriquecer_leads');
       reconectado = true;
       break;
     }
   }
   if (reconectado) break;
 }
+if (!reconectado) console.warn('⚠ Reconexão automática não encontrou o caminho');
 
-if (!reconectado) {
-  console.warn('⚠ Reconexão automática não encontrou o caminho. Ajuste manualmente no n8n:');
-  console.warn('  → Desconecte o nó de rota FALSE do "verificar_reserva" de "definir_termos"');
-  console.warn('  → Conecte direto para "enriquecer_leads"');
-}
-
-// ─── 4. edit_fields: garante campo email ──────────────────────────────────────
-const editFields = d.nodes.find(n => n.name === 'edit_fields' || n.name === 'Edit Fields');
+// edit_fields: garante campo email
+var editFields = d.nodes.find(function(n){ return n.name === 'edit_fields' || n.name === 'Edit Fields'; });
 if (editFields) {
-  const assignments = editFields.parameters?.assignments?.assignments || editFields.parameters?.values?.values || [];
-  const temEmail = assignments.some(a => a.name === 'email' || a.key === 'email');
+  var assignments = (editFields.parameters && editFields.parameters.assignments && editFields.parameters.assignments.assignments)
+    || (editFields.parameters && editFields.parameters.values && editFields.parameters.values.values) || [];
+  var temEmail = assignments.some(function(a){ return a.name === 'email' || a.key === 'email'; });
   if (!temEmail) {
     assignments.push({ id: 'email-field', name: 'email', value: '={{ $json._email }}', type: 'string' });
     console.log('✓ edit_fields: campo email adicionado');
@@ -230,18 +216,16 @@ if (editFields) {
   }
 }
 
-// ─── 5. Salvar ────────────────────────────────────────────────────────────────
 fs.writeFileSync(OUTPUT, JSON.stringify(d, null, 2));
 console.log('\n✓ Arquivo salvo:', OUTPUT);
 
-// ─── 6. Verificação ───────────────────────────────────────────────────────────
-const json = JSON.stringify(d);
-console.log('\n=== VERIFICAÇÃO ===');
-console.log('Nome v4:              ', json.includes('Victor Pizza v4') ? '✓' : '✗');
-console.log('CNPJá endpoint:       ', json.includes('api.cnpja.com') ? '✓' : '✗');
-console.log('Blacklist nativa:     ', json.includes('BLACKLIST_API') ? '✓' : '✗');
-console.log('IBGE cidade lookup:   ', json.includes('servicodados.ibge') ? '✓' : '✗');
-console.log('WhatsApp check:       ', json.includes('check-whatsapp') ? '✓' : '✗');
-console.log('Sem OpenAI:           ', !json.includes('openai.com') ? '✓' : '✗ (ainda tem OpenAI)');
-console.log('Sem Apify no código:  ', !json.includes('apify.com') ? '✓' : '✗ (ainda tem Apify)');
-console.log('Campo email:          ', json.includes('_email') ? '✓' : '✗');
+// ── Verificação final ──────────────────────────────────────────────────────────
+var json = JSON.stringify(d);
+console.log('\n=== VERIFICAÇÃO FINAL ===');
+console.log('Nome v4:           ', json.includes('Victor Pizza v4') ? '✓' : '✗');
+console.log('CNPJá endpoint:    ', json.includes('api.cnpja.com') ? '✓' : '✗');
+console.log('$helpers:          ', json.includes('$helpers') ? '✓' : '✗');
+console.log('IBGE lookup:       ', json.includes('servicodados.ibge') ? '✓' : '✗');
+console.log('WhatsApp check:    ', json.includes('check-whatsapp') ? '✓' : '✗');
+console.log('Sem OpenAI:        ', !json.includes('openai.com') ? '✓' : '✗');
+console.log('Campo email:       ', json.includes('_email') ? '✓' : '✗');
