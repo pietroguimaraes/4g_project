@@ -95,7 +95,6 @@ async function buscarCodigoIBGE(estado, cidade) {
 
 // Busca leads no CNPJá
 async function buscarCNPJa(estado, municipioId, cnaes, quantidade) {
-async function buscarCNPJa(estado, municipioId, cnaes, quantidade) {
   const parts = [];
   parts.push('mainActivity.id.in=' + encodeURIComponent(cnaes.join(',')));
   parts.push('address.state.in=' + encodeURIComponent(estado));
