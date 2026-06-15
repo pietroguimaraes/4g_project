@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Body inválido' }, { status: 400 })
   }
 
-  const { empresa, telefone, website, cidade, estado, pais, search_id, status, manual, tipo_loja, _fonte_telefone } = body as Record<string, unknown>
+  const { empresa, telefone, email, website, cidade, estado, pais, search_id, status, manual, tipo_loja, _fonte_telefone } = body as Record<string, unknown>
 
   if (!empresa || !telefone) {
     return NextResponse.json({ error: 'Campos obrigatórios: empresa, telefone' }, { status: 400 })
@@ -50,6 +50,7 @@ export async function POST(request: NextRequest) {
       {
         empresa: String(empresa),
         telefone: String(telefone),
+        email: email ? String(email) : null,
         website: website ? String(website) : null,
         cidade: cidade ? String(cidade) : null,
         estado: estado ? String(estado) : null,

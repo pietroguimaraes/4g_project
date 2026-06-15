@@ -10,11 +10,6 @@ const TIPOS_LOJA = [
   'Redes de mercado',
 ]
 
-const FAIXAS = [
-  { label: 'Pequena (~10 empresas)', value: 10 },
-  { label: 'Média (~20 empresas)', value: 20 },
-  { label: 'Grande (~30 empresas)', value: 30 },
-]
 
 const CAPITAIS: Record<string, string> = {
   AC: 'Rio Branco',      AL: 'Maceió',          AP: 'Macapá',
@@ -68,7 +63,7 @@ export function SearchForm({ onSearchComplete }: SearchFormProps) {
   const [cidades, setCidades] = useState<string[]>([])
   const [loadingCidades, setLoadingCidades] = useState(false)
   const [tipoLoja, setTipoLoja] = useState('')
-  const [faixa, setFaixa] = useState(10)
+  const [quantidade, setQuantidade] = useState(10)
   const [loading, setLoading] = useState(false)
   const [feedback, setFeedback] = useState<{ tipo: 'erro' | 'sucesso' | 'progresso'; mensagem: string } | null>(null)
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -172,7 +167,7 @@ export function SearchForm({ onSearchComplete }: SearchFormProps) {
     stopPolling()
     setLoading(true)
     try {
-      const result = await createSearch({ pais: 'Brasil', estado, cidade, quantidade: faixa, tipo_loja: tipoLoja })
+      const result = await createSearch({ pais: 'Brasil', estado, cidade, quantidade, tipo_loja: tipoLoja })
       setFeedback({
         tipo: 'progresso',
         mensagem: `Buscando empresas do tipo "${tipoLoja}" em ${cidade}... Isso pode levar alguns minutos.`,
@@ -180,7 +175,7 @@ export function SearchForm({ onSearchComplete }: SearchFormProps) {
       setEstado('')
       setCidade('')
       setTipoLoja('')
-      startPolling(result.id, faixa)
+      startPolling(result.id, quantidade)
     } catch (err) {
       const motivo = err instanceof Error ? err.message : 'Erro desconhecido.'
       setFeedback({ tipo: 'erro', mensagem: `Não foi possível iniciar a busca. Motivo: ${motivo}` })
@@ -264,16 +259,15 @@ export function SearchForm({ onSearchComplete }: SearchFormProps) {
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Quantidade de empresas</label>
-          <select
-            value={faixa}
-            onChange={(e) => setFaixa(Number(e.target.value))}
-            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white disabled:text-gray-400"
+          <input
+            type="number"
+            min={1}
+            max={100}
+            value={quantidade}
+            onChange={(e) => setQuantidade(Math.max(1, Math.min(100, Number(e.target.value))))}
+            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:text-gray-400"
             disabled={isFormDisabled}
-          >
-            {FAIXAS.map((f) => (
-              <option key={f.value} value={f.value}>{f.label}</option>
-            ))}
-          </select>
+          />
         </div>
       </div>
 
