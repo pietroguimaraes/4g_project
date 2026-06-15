@@ -147,7 +147,7 @@ export async function PATCH(
     .from('leads')
     .update(updates)
     .eq('telefone', telefone)
-    .select('id, empresa, telefone, status')
+    .select('id, empresa, telefone, status, email')
     .single()
 
   if (dbError) {
@@ -160,6 +160,27 @@ export async function PATCH(
 
   if (!data) {
     return NextResponse.json({ error: 'Lead não encontrado' }, { status: 404 })
+  }
+
+  // Envia email de prospecção quando lead é aprovado no painel
+  if (status === 'PROSPECTAR') {
+    const resendKey = process.env.RESEND_API_KEY
+    const leadEmail = (data as Record<string, unknown>).email as string | null
+    if (resendKey && leadEmail) {
+      fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${resendKey}`,
+        },
+        body: JSON.stringify({
+          from: process.env.EMAIL_FROM ?? 'onboarding@resend.dev',
+          to: [leadEmail],
+          subject: `Proposta de distribuição de pizza — ${data!.empresa}`,
+          html: buildProspeccaoEmail(String(data!.empresa)),
+        }),
+      }).catch(() => {}) // Fire-and-forget, nao bloqueia o response
+    }
   }
 
   // Dispara webhook do n8n quando lead entra em PROSPECTADOS (novo ou follow-up)
@@ -200,4 +221,26 @@ export async function PATCH(
   }
 
   return NextResponse.json(data)
+}
+
+function buildProspeccaoEmail(empresa: string): string {
+  return `<!DOCTYPE html>
+<html>
+<body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #333;">
+  <h2 style="color: #c0392b;">Proposta de parceria — Pizza Premium</h2>
+  <p>Ol&aacute;, equipe da <strong>${empresa}</strong>,</p>
+  <p>Meu nome &eacute; Victor e represento uma distribuidora especializada em pizzas congeladas e resfriadas, com atua&ccedil;&atilde;o em SP, PR, RS e SC.</p>
+  <p><strong>Por que trabalhar com a gente?</strong></p>
+  <ul>
+    <li>Pizza congelada e resfriada em m&uacute;ltiplos sabores e formatos</li>
+    <li>Entregas programadas com prazo garantido</li>
+    <li>Condi&ccedil;&otilde;es especiais para redes e supermercados</li>
+    <li>Alta margem para o ponto de venda</li>
+  </ul>
+  <p>Gostaria de agendar uma conversa r&aacute;pida para apresentar nosso cat&aacute;logo e condi&ccedil;&otilde;es comerciais.</p>
+  <p>Responda este email ou entre em contato para agendarmos.</p>
+  <br>
+  <p>Atenciosamente,<br><strong>Victor</strong><br>Distribuidora de Pizza</p>
+</body>
+</html>`
 }
