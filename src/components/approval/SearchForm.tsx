@@ -60,7 +60,9 @@ interface SearchFormProps {
 export function SearchForm({ onSearchComplete }: SearchFormProps) {
   const [estado, setEstado] = useState('')
   const [cidade, setCidade] = useState('')
-  const [cidades, setCidades] = useState<string[]>([])
+  const [municipioId, setMunicipioId] = useState<number | null>(null)
+  const [bairro, setBairro] = useState('')
+  const [cidades, setCidades] = useState<{id: number; nome: string}[]>([])
   const [loadingCidades, setLoadingCidades] = useState(false)
   const [tipoLoja, setTipoLoja] = useState('')
   const [quantidade, setQuantidade] = useState(10)
@@ -73,7 +75,7 @@ export function SearchForm({ onSearchComplete }: SearchFormProps) {
     return () => stopPolling()
   }, [])
 
-  const cidadesCache = useRef<Record<string, string[]>>({})
+  const cidadesCache = useRef<Record<string, {id: number; nome: string}[]>>({})
 
   useEffect(() => {
     if (!estado) {
@@ -84,16 +86,17 @@ export function SearchForm({ onSearchComplete }: SearchFormProps) {
     if (cidadesCache.current[estado]) {
       setCidades(cidadesCache.current[estado])
       setCidade('')
+      setMunicipioId(null)
       return
     }
     setLoadingCidades(true)
     setCidade('')
+    setMunicipioId(null)
     fetch(`https://servicodados.ibge.gov.br/api/v1/localidades/estados/${estado}/municipios?orderBy=nome`)
       .then(r => r.json())
-      .then((data: { nome: string }[]) => {
-        const nomes = data.map(m => m.nome)
-        cidadesCache.current[estado] = nomes
-        setCidades(nomes)
+      .then((data: { id: number; nome: string }[]) => {
+        cidadesCache.current[estado] = data.map(m => ({ id: m.id, nome: m.nome }))
+        setCidades(data.map(m => ({ id: m.id, nome: m.nome })))
       })
       .catch(() => setCidades([]))
       .finally(() => setLoadingCidades(false))
@@ -167,13 +170,23 @@ export function SearchForm({ onSearchComplete }: SearchFormProps) {
     stopPolling()
     setLoading(true)
     try {
-      const result = await createSearch({ pais: 'Brasil', estado, cidade, quantidade, tipo_loja: tipoLoja })
+      const result = await createSearch({
+        pais: 'Brasil',
+        estado,
+        cidade,
+        municipio_id: municipioId ?? undefined,
+        bairro: bairro || undefined,
+        quantidade,
+        tipo_loja: tipoLoja
+      })
       setFeedback({
         tipo: 'progresso',
         mensagem: `Buscando empresas do tipo "${tipoLoja}" em ${cidade}... Isso pode levar alguns minutos.`,
       })
       setEstado('')
       setCidade('')
+      setMunicipioId(null)
+      setBairro('')
       setTipoLoja('')
       startPolling(result.id, quantidade)
     } catch (err) {
@@ -213,7 +226,12 @@ export function SearchForm({ onSearchComplete }: SearchFormProps) {
           </label>
           <select
             value={cidade}
-            onChange={(e) => setCidade(e.target.value)}
+            onChange={(e) => {
+              const nomeSelecionado = e.target.value
+              setCidade(nomeSelecionado)
+              const found = cidades.find(c => c.nome === nomeSelecionado)
+              setMunicipioId(found ? found.id : null)
+            }}
             className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white disabled:text-gray-400"
             disabled={isFormDisabled || !estado}
           >
@@ -223,23 +241,31 @@ export function SearchForm({ onSearchComplete }: SearchFormProps) {
             {[...cidades]
               .sort((a, b) => {
                 const capital = CAPITAIS[estado]
-                if (a === capital) return -1
-                if (b === capital) return 1
+                if (a.nome === capital) return -1
+                if (b.nome === capital) return 1
                 return 0
               })
               .map((c) => {
-                const isCapital = CAPITAIS[estado] === c
+                const isCapital = CAPITAIS[estado] === c.nome
                 return (
-                  <option
-                    key={c}
-                    value={c}
-                    style={isCapital ? { color: '#b8860b', fontWeight: '700' } : undefined}
-                  >
-                    {isCapital ? `★ ${c}` : c}
+                  <option key={c.id} value={c.nome} style={isCapital ? { color: '#b8860b', fontWeight: '700' } : undefined}>
+                    {isCapital ? `★ ${c.nome}` : c.nome}
                   </option>
                 )
               })}
           </select>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Bairro <span className="text-gray-400 font-normal">(opcional)</span></label>
+          <input
+            type="text"
+            value={bairro}
+            onChange={(e) => setBairro(e.target.value)}
+            placeholder="Ex: Centro, Vila Madalena..."
+            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:text-gray-400"
+            disabled={isFormDisabled}
+          />
         </div>
 
         <div>

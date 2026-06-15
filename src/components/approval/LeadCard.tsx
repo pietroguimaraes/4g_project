@@ -1,5 +1,9 @@
 import type { Lead } from '@/types'
 
+function formatarCNPJ(cnpj: string) {
+  return cnpj.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5')
+}
+
 const CATEGORIA_BADGE: Record<string, { label: string; color: string }> = {
   'SUPERMERCADO':  { label: 'Supermercado',  color: 'bg-blue-100 text-blue-700' },
   'ATACADISTA':    { label: 'Atacadista',    color: 'bg-green-100 text-green-700' },
@@ -37,8 +41,17 @@ export function LeadCard({ lead }: LeadCardProps) {
       {lead.email && (
         <p className="text-blue-600 text-xs mt-0.5">{lead.email}</p>
       )}
+      {lead.cnpj && (
+        <p className="text-gray-500 text-xs mt-0.5">CNPJ: {formatarCNPJ(lead.cnpj)}</p>
+      )}
       {lead.cidade && (
         <p className="text-gray-400 text-xs mt-0.5">{lead.cidade}</p>
+      )}
+      {lead.bairro && (
+        <p className="text-gray-400 text-xs mt-0.5">{lead.bairro}</p>
+      )}
+      {lead.endereco && (
+        <p className="text-gray-400 text-xs mt-0.5">{lead.endereco}</p>
       )}
     </div>
   )

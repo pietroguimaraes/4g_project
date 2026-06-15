@@ -32,6 +32,10 @@ export interface Lead {
   search_id?: string
   tipo_loja?: string
   fonte_telefone?: string
+  cnpj?: string
+  bairro?: string
+  endereco?: string
+  cep?: string
   manual: boolean
   created_at: string
   updated_at: string
@@ -49,5 +53,7 @@ export interface Search {
   quantidade_bruta?: number
   quantidade_entregue?: number
   num_rodadas?: number
+  municipio_id?: number
+  bairro?: string
   created_at: string
 }

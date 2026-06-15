@@ -110,6 +110,12 @@ export function KanbanCard({ lead, borderColor, onDeleted, isPequenos }: KanbanC
       className={`bg-white rounded-lg border border-gray-200 border-l-4 ${borderColor} p-3 shadow-sm ${isDraggable ? 'cursor-grab active:cursor-grabbing' : ''} select-none`}
     >
       <p className="font-semibold text-gray-900 text-sm truncate">{lead.empresa}</p>
+      {lead.email && (
+        <p className="text-blue-600 text-xs truncate mt-0.5">{lead.email}</p>
+      )}
+      {lead.cnpj && (
+        <p className="text-gray-400 text-xs mt-0.5">{lead.cnpj.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5')}</p>
+      )}
       {lead.manual && (
         <span className="inline-block mt-1 text-xs px-2 py-0.5 rounded-full font-medium bg-purple-100 text-purple-700">
           Manual
@@ -196,6 +202,10 @@ export function KanbanCard({ lead, borderColor, onDeleted, isPequenos }: KanbanC
               {lead.email && <>
                 <span className="text-gray-500">Email</span>
                 <span className="text-blue-600 truncate">{lead.email}</span>
+              </>}
+              {lead.cnpj && <>
+                <span className="text-gray-500">CNPJ</span>
+                <span className="text-gray-800">{lead.cnpj.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5')}</span>
               </>}
               {lead.website && <>
                 <span className="text-gray-500">Website</span>

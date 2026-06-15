@@ -4,6 +4,8 @@ export interface CreateSearchData {
   cidade: string
   quantidade: number
   tipo_loja: string
+  municipio_id?: number
+  bairro?: string
 }
 
 export async function createSearch(data: CreateSearchData): Promise<{ id: string; status: string }> {
