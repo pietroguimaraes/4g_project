@@ -163,7 +163,7 @@ export async function PATCH(
   }
 
   // Envia email via n8n (Gmail node) quando lead é aprovado no painel
-  if (status === 'PROSPECTAR') {
+  if (status === 'PROSPECTADOS') {
     const emailUrl = process.env.N8N_EMAIL_URL
     const leadEmail = (data as Record<string, unknown>).email as string | null
     if (emailUrl && leadEmail) {
