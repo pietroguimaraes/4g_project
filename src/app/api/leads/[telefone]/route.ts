@@ -167,15 +167,19 @@ export async function PATCH(
     const emailUrl = process.env.N8N_EMAIL_URL
     const leadEmail = (data as Record<string, unknown>).email as string | null
     if (emailUrl && leadEmail) {
-      fetch(emailUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          empresa: data!.empresa,
-          email: leadEmail,
-          telefone: data!.telefone,
-        }),
-      }).catch(() => {}) // Fire-and-forget, nao bloqueia o response
+      try {
+        await fetch(emailUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            empresa: data!.empresa,
+            email: leadEmail,
+            telefone: data!.telefone,
+          }),
+        })
+      } catch {
+        // Email falhou mas lead ja aprovado — nao bloqueia
+      }
     }
   }
 
