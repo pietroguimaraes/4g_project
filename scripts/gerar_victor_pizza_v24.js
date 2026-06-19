@@ -2,7 +2,7 @@ const fs = require('fs');
 
 // v24: PRODUCAO — remove o email fixo de teste, usa email real do lead
 // Baseado no v34 (fix global schedule + montar_email + Gmail)
-const INPUT  = 'C:/Users/guima/Downloads/Fluxo_victor_pizza_v39.json';
+const INPUT  = 'C:/Users/guima/Downloads/Fluxo_victor_pizza_v40.json';
 const OUTPUT = 'C:/Users/guima/Downloads/Fluxo_victor_pizza_v24.json';
 
 var d = JSON.parse(fs.readFileSync(INPUT, 'utf8'));
