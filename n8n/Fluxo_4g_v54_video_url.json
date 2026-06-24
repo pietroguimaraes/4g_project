@@ -1,0 +1,865 @@
+{
+  "name": "Fluxo_4g — Dashboard v2 (v54 video-url)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "busca-dashboard",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -95744,
+        -96816
+      ],
+      "id": "d9a68b08-f2d8-4fe3-a554-db8d48669062",
+      "name": "receber_busca_dashboard",
+      "webhookId": "c1d2e3f4-0000-0000-0000-000000000001"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\n  const validItems = [];\n\n  for (const item of items) {\n    const rawPhone = item.json.phoneUnformatted || '';\n\n    // Remove tudo que não for número\n    let digits = rawPhone.replace(/\\D/g, '');\n\n    if (!digits) continue;\n\n    // Remove código do país se já vier com 55\n    if (digits.startsWith('55') && digits.length >= 12) {\n      digits = digits.substring(2);\n    }\n\n    // Normaliza 10 dígitos (formato antigo)\n    if (digits.length === 10) {\n      const primeiroAposDDD = digits.charAt(2);\n      if (['6', '7', '8', '9'].includes(primeiroAposDDD)) {\n        digits = digits.substring(0, 2) + '9' + digits.substring(2);\n      } else {\n        continue; // fixo, descarta\n      }\n    }\n\n    // Deve ter exatamente 11 dígitos\n    if (digits.length !== 11) continue;\n\n    // Deve ser celular (3º dígito = 9)\n    if (digits.charAt(2) !== '9') continue;\n\n    // DDD válido entre 11 e 99\n    const ddd = parseInt(digits.substring(0, 2));\n    if (ddd < 11 || ddd > 99) continue;\n\n    validItems.push({\n      json: {\n        ...item.json,\n        phoneUnformatted: '55' + digits\n      }\n    });\n  }\n\n  return validItems;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -93952,
+        -96624
+      ],
+      "id": "04452356-582e-43a7-82b4-62ae6a7c5fe4",
+      "name": "code_in_java"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "92767775-4458-4ee6-8002-45a65555e380",
+              "name": "Empresa",
+              "value": "={{ $json.title }}",
+              "type": "string"
+            },
+            {
+              "id": "aafe7c28-4059-4acf-8939-d91ec6b2d0be",
+              "name": "Telefone",
+              "value": "={{ $json.phoneUnformatted }}",
+              "type": "string"
+            },
+            {
+              "id": "67616a79-334e-4630-a054-7f8c8b465bba",
+              "name": "Localização",
+              "value": "={{ $json.address }}",
+              "type": "string"
+            },
+            {
+              "id": "status-field-001",
+              "name": "Status",
+              "value": "Pendente",
+              "type": "string"
+            },
+            {
+              "id": "c42b949a-7874-4f82-8c10-43e84e55ed5e",
+              "name": "categories",
+              "value": "={{ $json.categories }}",
+              "type": "array"
+            },
+            {
+              "id": "status-final-v19",
+              "name": "_status_final",
+              "value": "={{ $json._status_final }}",
+              "type": "string"
+            },
+            {
+              "id": "tipo-loja-v19",
+              "name": "_tipo_loja",
+              "value": "={{ $json._tipo_loja }}",
+              "type": "string"
+            },
+            {
+              "id": "cidade-v23",
+              "name": "Cidade",
+              "value": "={{ $json.city || ($json.address || '').split(',')[0].trim() }}",
+              "type": "string"
+            },
+            {
+              "id": "estado-v23",
+              "name": "Estado",
+              "value": "={{ $json.state || $json.stateCode || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "pais-v23",
+              "name": "Pais",
+              "value": "={{ $json.countryCode || 'BR' }}",
+              "type": "string"
+            },
+            {
+              "id": "site-v23",
+              "name": "Site",
+              "value": "={{ $json.website || '' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -93728,
+        -96624
+      ],
+      "id": "9f2730a5-8e34-453e-81ec-aa63cf40e71a",
+      "name": "edit_fields"
+    },
+    {
+      "parameters": {
+        "operation": "Run actor and get dataset",
+        "actorId": {
+          "__rl": true,
+          "value": "nwua9Gu5YrADL7ZDj",
+          "mode": "list",
+          "cachedResultName": "Google Maps Scraper (compass/crawler-google-places)",
+          "cachedResultUrl": "https://console.apify.com/actors/nwua9Gu5YrADL7ZDj/input"
+        },
+        "customBody": "={{ JSON.stringify({\n  searchStringsArray: $('definir_termos').item.json.searchStringsArray,\n  maxCrawledPlacesPerSearch: $('definir_termos').item.json.perSearch,\n  maxResults: $('definir_termos').item.json.maxResults,\n  language: 'pt-PT',\n  locationQuery: $('definir_termos').item.json.locationQuery\n}) }}"
+      },
+      "type": "@apify/n8n-nodes-apify.apify",
+      "typeVersion": 1,
+      "position": [
+        -94848,
+        -96720
+      ],
+      "id": "88326e74-4c5a-4201-abe5-49db8f186bb6",
+      "name": "Run an Actor and get dataset1",
+      "credentials": {
+        "apifyApi": {
+          "id": "JYuzlKJEKcJzF1aO",
+          "name": "Git Hub"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://secondbrain.uazapi.com/send/text",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "token",
+              "value": "6781e300-9cfe-4d72-9195-aff89f807be2"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "number",
+              "value": "={{ $json.query }}"
+            },
+            {
+              "name": "text",
+              "value": "=Olá, tudo bem?!\nPesquisando sobre a {{ $('edit_fields').item.json.Empresa }}, vi que vocês têm um perfil excelente para as linhas que distribuímos.\nTrabalho com distribuição de bolas (temos os modelos campeões de venda do mercado) e queria te mostrar as opções.\nPosso enviar o catálogo rapidinho aqui para você dar uma olhada?"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -93728,
+        -96240
+      ],
+      "id": "7cc8c28f-47c2-4411-a1f6-7198f63e97c7",
+      "name": "HTTP Request1",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://secondbrain.uazapi.com/chat/check",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "token",
+              "value": "6781e300-9cfe-4d72-9195-aff89f807be2"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n    \"numbers\": [\"={{ $('edit_fields').item.json.Telefone }}\"]\n  }",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -93728,
+        -96432
+      ],
+      "id": "c8f69023-d08e-4c5a-9835-b56c9d561e21",
+      "name": "HTTP Request2",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://4g-project.vercel.app/api/leads",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIyNjkyODc2My1iOGQ5LTQ5YTAtYmY3Yy0wNGIzMmFjMmNhNTUiLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwiaWF0IjoxNzc2MjgzNjUxfQ.gc_mgxaHzURxlIs5W0iR2RH2yIQ4BV7pEbyueJ95nGU"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"empresa\": \"{{ $('edit_fields').item.json.Empresa }}\",\n  \"telefone\": \"{{ $('edit_fields').item.json.Telefone }}\",\n  \"website\": \"{{ $('edit_fields').item.json.Site }}\",\n  \"cidade\": \"{{ $('edit_fields').item.json.Cidade }}\",\n  \"estado\": \"{{ $('edit_fields').item.json.Estado }}\",\n  \"pais\": \"{{ $('edit_fields').item.json.Pais }}\",\n  \"status\": \"{{ $('edit_fields').item.json._status_final }}\",\n  \"tipo_loja\": \"{{ $('edit_fields').item.json._tipo_loja }}\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -93504,
+        -96432
+      ],
+      "id": "1d02a857-3fbd-4b2a-8f35-97515febb29d",
+      "name": "HTTP Request6",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.first().json.body;\nconst tipoLoja = body.tipo_loja || '';\nconst cidade = body.cidade || '';\nconst estado = body.estado || '';\nconst quantidade = parseInt(body.quantidade) || 30;\n\n// v51 — termos atualizados com base nos clientes reais do Anderson (2026-06-23)\n// Adicionados: importados, loja de departamentos, papelaria brinquedos,\n//              artigos domésticos, comércio de variedades, atacado variedades\nconst TERMOS = {\n  'Lojas de artigos esportivos': [\n    'loja de artigos esportivos',\n    'loja de material esportivo',\n    'loja esportiva',\n    'equipamentos esportivos',\n    'sport shop',\n    'loja multiesportes',\n    'artigos de futebol loja',\n    'bola esportiva loja',\n    'loja de beach tennis',\n    'loja de patins',\n    'loja de surf skate',\n  ],\n  'Lojas de brinquedos': [\n    'loja de brinquedos',\n    'brinquedos infantis',\n    'loja de jogos e brinquedos',\n    'toy store',\n    'artigos infantis loja',\n    'papelaria brinquedos',\n    'comercial brinquedos',\n  ],\n  'Eletroportáteis/eletrônicos': [\n    'loja de eletrônicos',\n    'loja de eletrodomésticos',\n    'loja de celulares',\n    'loja de informática',\n    'loja de games',\n    'eletrodomésticos loja',\n  ],\n  'Lojas de Variedades/1,99/miudezas/bazares': [\n    'loja de variedades',\n    'importados',\n    'loja de importados',\n    'loja de departamentos',\n    'comércio de variedades',\n    'loja de presentes',\n    'armarinho',\n    'loja de novidades',\n    'artigos domésticos loja',\n    'bazar',\n    'utilidades domésticas loja',\n    'atacado variedades',\n    'miudezas',\n  ],\n};\n\nconst searchStringsArray = TERMOS[tipoLoja] || TERMOS['Lojas de Variedades/1,99/miudezas/bazares'];\nconst locationQuery = cidade + ', ' + estado + ', Brasil';\nconst maxResults = quantidade;\nconst perSearch = Math.max(Math.ceil(maxResults / searchStringsArray.length), 4);\n\nreturn [{ json: {\n  searchStringsArray, locationQuery, quantidade, maxResults, perSearch,\n  tipo_loja: tipoLoja, cidade, estado, ...body,\n} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -95072,
+        -96720
+      ],
+      "id": "5cb861fe-5159-44f4-95bf-6b54c7a10578",
+      "name": "definir_termos",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "prospectar-lead",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -95744,
+        -97136
+      ],
+      "id": "37d7407a-a54f-4100-94dc-d9daf5d005ab",
+      "name": "webhook_prospectar_lead",
+      "webhookId": "prospectar-lead-webhook-001"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "map-query-001",
+              "name": "query",
+              "value": "={{ $json.body.telefone }}",
+              "type": "string"
+            },
+            {
+              "id": "map-empresa-001",
+              "name": "Empresa",
+              "value": "={{ $json.body.empresa }}",
+              "type": "string"
+            },
+            {
+              "id": "map-cidade-001",
+              "name": "cidade",
+              "value": "={{ $json.body.cidade }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -95520,
+        -97136
+      ],
+      "id": "5a0b3792-ad92-4a53-9993-8fe685960453",
+      "name": "set_prospectar_dados"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://secondbrain.uazapi.com/send/text",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "token",
+              "value": "6781e300-9cfe-4d72-9195-aff89f807be2"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "number",
+              "value": "={{ $json.query }}"
+            },
+            {
+              "name": "text",
+              "value": "=Passando pra falar com o responsável pela {{ $json.Empresa }}, aí em {{ $json.cidade }} — é exatamente o perfil de loja que eu atendo. Sou o Anderson, da PRÓ, importadora de bolas e itens de variedade, um dos três maiores do país no segmento de bolas.\n\nNesse vídeo você vê parte do nosso showroom com os itens de maior saída: bola de PVC em vários tamanhos, vinil, upa-upa e linha de variedades.\n\nComo importamos direto da China, o preço chega na sua loja sem intermediário no caminho — o que abre uma margem melhor pra revenda.\n\nDeixo meu contato à disposição. Se quiser conhecer a tabela e as condições, é só me retornar."
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -95296,
+        -97136
+      ],
+      "id": "e8d46a69-ea94-4aa7-99be-e6fd115f6b6e",
+      "name": "enviar_prospecao_webhook"
+    },
+    {
+      "parameters": {
+        "jsCode": "// v46 — enriquecer_leads com IA (OpenAI web_search)\n// Ordem de tentativas por lead:\n//  1. Tem telefone → valida celular BR → passa ou descarta\n//  2. Sem fone + tem site → raspa HTML (wa.me/ ou padrão) → valida → passa\n//  3. Sem fone (falhou acima) → IA busca telefone pelo nome+cidade → valida → passa\n//  4. Sem resultado → descarta\n\nconst OPENAI_KEY = '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';\n\nconst allItems = $input.all();\nconst quantidade_bruta = allItems.length;\nconst resultado = [];\n\n// Valida e normaliza para celular BR (11 dígitos DD+9+8)\n// Retorna string normalizada sem DDI, ou null se inválido\nfunction normalizarCelular(raw) {\n  let d = raw.replace(/\\D/g, '');\n  if (d.startsWith('55') && d.length >= 12) d = d.substring(2);\n  if (d.length === 10) {\n    const t = d.charAt(2);\n    if (['6','7','8','9'].includes(t)) d = d.substring(0,2) + '9' + d.substring(2);\n    else return null;\n  }\n  if (d.length !== 11) return null;\n  if (d.charAt(2) !== '9') return null;\n  const ddd = parseInt(d.substring(0,2));\n  if (ddd < 11 || ddd > 99) return null;\n  return d;\n}\n\n// Chama a OpenAI Responses API com web_search_preview\n// Retorna o número encontrado (normalizado) ou null\nasync function buscarTelefoneIA(nome, endereco, cidade) {\n  try {\n    const prompt = `Busque o número de WhatsApp ou celular da empresa: \"${nome}\", localizada em ${endereco ? endereco + ', ' : ''}${cidade}, Brasil.\nResponda APENAS com o número de telefone (com DDD), sem formatação, sem texto adicional.\nSe não encontrar com certeza, responda: não encontrado`;\n\n    const resp = await $helpers.httpRequest({\n      method: 'POST',\n      url: 'https://api.openai.com/v1/responses',\n      headers: {\n        'Authorization': `Bearer ${OPENAI_KEY}`,\n        'Content-Type': 'application/json',\n      },\n      body: JSON.stringify({\n        model: 'gpt-4o-mini',\n        tools: [{ type: 'web_search_preview' }],\n        input: prompt,\n      }),\n      timeout: 20000,\n    });\n\n    // Extrai texto da resposta\n    const outputItems = resp.output || [];\n    const msg = outputItems.find(o => o.type === 'message');\n    const txt = (msg?.content?.find(c => c.type === 'output_text')?.text || '').trim();\n\n    if (!txt || txt.toLowerCase().includes('não encontrado') || txt.toLowerCase().includes('nao encontrado')) {\n      return null;\n    }\n\n    // Tenta extrair um número do texto retornado\n    const nums = txt.match(/[\\d\\s()\\-+]+/g) || [];\n    for (const n of nums) {\n      const cel = normalizarCelular(n);\n      if (cel) return cel;\n    }\n    return null;\n  } catch(e) {\n    return null; // falha silenciosa\n  }\n}\n\nfor (const item of allItems) {\n  const rawTel = (item.json.phone || item.json.phoneUnformatted || '');\n  const website = item.json.website || '';\n  const nome    = item.json.title || item.json.empresa || '';\n  const cidade  = item.json.city || item.json.cidade || '';\n  const end     = item.json.address || item.json.endereco || '';\n\n  // ── Etapa 1: tem telefone → valida ──────────────────────────\n  if (rawTel.replace(/\\D/g, '').length >= 10) {\n    const cel = normalizarCelular(rawTel);\n    if (cel) {\n      resultado.push({ json: Object.assign({}, item.json, { phoneUnformatted: '55' + cel }) });\n    } else {\n      // Telefone inválido (fixo?) → tenta IA antes de descartar\n      const celIA = await buscarTelefoneIA(nome, end, cidade);\n      if (celIA) {\n        resultado.push({ json: Object.assign({}, item.json, {\n          phoneUnformatted: '55' + celIA,\n          phone: celIA,\n          _fonte_telefone: 'ia_websearch',\n        })});\n      }\n    }\n    continue;\n  }\n\n  // ── Etapa 2: sem telefone + tem site → raspa HTML ────────────\n  let foundByHtml = false;\n  if (website) {\n    try {\n      const response = await $helpers.httpRequest({ method: 'GET', url: website, timeout: 8000 });\n      const html = (typeof response === 'string') ? response : (response.body || response.data || JSON.stringify(response));\n\n      // wa.me/ (WhatsApp direto)\n      const waMatch = html.match(/wa\\.me\\/(\\d{10,15})/);\n      if (waMatch) {\n        const cel = normalizarCelular(waMatch[1]);\n        if (cel) {\n          resultado.push({ json: Object.assign({}, item.json, {\n            phoneUnformatted: '55' + cel, phone: cel, _fonte_telefone: 'website_wame',\n          })});\n          foundByHtml = true;\n        }\n      }\n\n      if (!foundByHtml) {\n        const pats = html.match(/\\(?\\d{2}\\)?\\s*9?\\d{4}[-\\s]?\\d{4}/g) || [];\n        for (const p of pats) {\n          const cel = normalizarCelular(p);\n          if (cel) {\n            resultado.push({ json: Object.assign({}, item.json, {\n              phoneUnformatted: '55' + cel, phone: cel, _fonte_telefone: 'website_html',\n            })});\n            foundByHtml = true;\n            break;\n          }\n        }\n      }\n    } catch(e) { /* site inacessível */ }\n  }\n\n  if (foundByHtml) continue;\n\n  // ── Etapa 3: IA busca o telefone ────────────────────────────\n  if (nome && cidade) {\n    const celIA = await buscarTelefoneIA(nome, end, cidade);\n    if (celIA) {\n      resultado.push({ json: Object.assign({}, item.json, {\n        phoneUnformatted: '55' + celIA,\n        phone: celIA,\n        _fonte_telefone: 'ia_websearch',\n      })});\n      continue;\n    }\n  }\n\n  // ── Etapa 4: descarta ────────────────────────────────────────\n}\n\nif (resultado.length === 0) {\n  return [{ json: { _sem_resultado: true, _meta_bruta: quantidade_bruta, _meta_filtrada: 0 } }];\n}\n\nreturn resultado.map((item, idx) => ({\n  json: Object.assign({}, item.json, {\n    _meta_bruta:    idx === 0 ? quantidade_bruta : undefined,\n    _meta_filtrada: idx === 0 ? resultado.length  : undefined,\n  })\n}));"
+      },
+      "id": "a8c6e2eb-185e-4460-b763-580343173d5a",
+      "name": "enriquecer_leads",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -94624,
+        -96720
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const allItems = $input.all();\nconst items = allItems.filter(i => !i.json._sem_resultado);\nconst tipoLoja = $('definir_termos').first().json.tipo_loja || '';\nconst quantidadePedida = $('definir_termos').first().json.quantidade_pedida || items.length;\n\nif (items.length === 0) {\n  return [{ json: { _sem_resultado: true, _total_entregue: 0, _tipo_loja: tipoLoja } }];\n}\n\nconst entrega = items.slice(0, quantidadePedida);\nconst reserva  = items.slice(quantidadePedida);\n\nreturn [\n  // Primeiros N → LOCALIZADOS (aparecem no painel de aprovação)\n  ...entrega.map((item, idx) => {\n    const json = Object.assign({}, item.json);\n    delete json._meta_bruta;\n    delete json._meta_filtrada;\n    json._status_final    = 'LOCALIZADOS';\n    json._tipo_loja       = tipoLoja;\n    json._total_entregue  = entrega.length;\n    return { json };\n  }),\n  // Resto → RESERVA (salvos no banco mas não aparecem no painel)\n  ...reserva.map(item => {\n    const json = Object.assign({}, item.json);\n    delete json._meta_bruta;\n    delete json._meta_filtrada;\n    json._status_final    = 'RESERVA';\n    json._tipo_loja       = tipoLoja;\n    json._total_entregue  = entrega.length;\n    return { json };\n  }),\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -94400,
+        -96720
+      ],
+      "id": "73cc5869-ea51-4fc2-9794-0f10b29f7d58",
+      "name": "finalizar_busca"
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "={{ 'https://4g-project.vercel.app/api/searches/' + $('receber_busca_dashboard').first().json.body.search_id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIyNjkyODc2My1iOGQ5LTQ5YTAtYmY3Yy0wNGIzMmFjMmNhNTUiLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwiaWF0IjoxNzc2MjgzNjUxfQ.gc_mgxaHzURxlIs5W0iR2RH2yIQ4BV7pEbyueJ95nGU"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ status: 'CONCLUÍDA', quantidade_bruta: $('enriquecer_leads').first().json._meta_bruta || 0, quantidade_entregue: $('finalizar_busca').first().json._total_entregue || 0, num_rodadas: 1 }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -93280,
+        -96432
+      ],
+      "id": "aee0eb19-158c-44e2-94bf-19e8fc6e0b97",
+      "name": "patch_busca_concluida",
+      "executeOnce": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "check-sem-resultado",
+              "leftValue": "={{ $json._sem_resultado }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "7f0b5c5b-915c-4212-9e47-b2f21a5c0d21",
+      "name": "verificar_resultado",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -94176,
+        -96720
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "={{ 'https://4g-project.vercel.app/api/searches/' + $('receber_busca_dashboard').first().json.body.search_id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIyNjkyODc2My1iOGQ5LTQ5YTAtYmY3Yy0wNGIzMmFjMmNhNTUiLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwiaWF0IjoxNzc2MjgzNjUxfQ.gc_mgxaHzURxlIs5W0iR2RH2yIQ4BV7pEbyueJ95nGU"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ status: ($json._total_entregue > 0) ? 'CONCLUÍDA' : 'ERRO', quantidade_entregue: $json._total_entregue || 0 }) }}",
+        "options": {}
+      },
+      "id": "8ec9781f-bedc-47cd-a047-025f2c9cbfea",
+      "name": "marcar_busca_erro",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -93952,
+        -96816
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ 'https://4g-project.vercel.app/api/leads/reserve-count?cidade=' + encodeURIComponent($('receber_busca_dashboard').first().json.body.cidade) + '&tipo_loja=' + encodeURIComponent($('receber_busca_dashboard').first().json.body.tipo_loja) }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIyNjkyODc2My1iOGQ5LTQ5YTAtYmY3Yy0wNGIzMmFjMmNhNTUiLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwiaWF0IjoxNzc2MjgzNjUxfQ.gc_mgxaHzURxlIs5W0iR2RH2yIQ4BV7pEbyueJ95nGU"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 8000
+        }
+      },
+      "id": "c6ae8646-4cb3-4632-bfcd-ca6d454d9c99",
+      "name": "verificar_reserva",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -95520,
+        -96816
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "check-reserva",
+              "leftValue": "={{ $json.count || 0 }}",
+              "rightValue": "={{ $('receber_busca_dashboard').first().json.body.quantidade || 20 }}",
+              "operator": {
+                "type": "number",
+                "operation": "gte"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "d5bd5f6b-baf0-43e7-8843-bd6bde023722",
+      "name": "reserva_suficiente",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -95296,
+        -96816
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://4g-project.vercel.app/api/leads/activate-reserve",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIyNjkyODc2My1iOGQ5LTQ5YTAtYmY3Yy0wNGIzMmFjMmNhNTUiLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwiaWF0IjoxNzc2MjgzNjUxfQ.gc_mgxaHzURxlIs5W0iR2RH2yIQ4BV7pEbyueJ95nGU"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  cidade: $('receber_busca_dashboard').first().json.body.cidade,\n  tipo_loja: $('receber_busca_dashboard').first().json.body.tipo_loja,\n  quantidade: $('receber_busca_dashboard').first().json.body.quantidade || 20\n}) }}",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "id": "c89efc1b-4e45-409c-a5c4-31ff45d3e011",
+      "name": "ativar_reserva",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -95072,
+        -96912
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "={{ 'https://4g-project.vercel.app/api/searches/' + $('receber_busca_dashboard').first().json.body.search_id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIyNjkyODc2My1iOGQ5LTQ5YTAtYmY3Yy0wNGIzMmFjMmNhNTUiLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwiaWF0IjoxNzc2MjgzNjUxfQ.gc_mgxaHzURxlIs5W0iR2RH2yIQ4BV7pEbyueJ95nGU"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  status: 'CONCLUÍDA',\n  quantidade_bruta: $('verificar_reserva').first().json.count || 0,\n  quantidade_entregue: $('ativar_reserva').first().json.ativados || 0,\n  num_rodadas: 1\n}) }}",
+        "options": {}
+      },
+      "id": "fb3e3722-bf70-4c01-8438-9c44e1877935",
+      "name": "patch_reserva_concluida",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -94848,
+        -96912
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://secondbrain.uazapi.com/send/text",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "token",
+              "value": "6781e300-9cfe-4d72-9195-aff89f807be2"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "number",
+              "value": "={{ $('set_prospectar_dados').first().json.query }}"
+            },
+            {
+              "name": "text",
+              "value": "=https://drive.google.com/file/d/1WwjnuTT2DtZ6IKS912PJ7CsK5qfwlJao/view?usp=sharing"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -94848,
+        -97136
+      ],
+      "id": "dc9c39a4-6355-4747-b859-23100842ddfd",
+      "name": "enviar_prospecao_webhook1"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        -95072,
+        -97136
+      ],
+      "id": "f07673f0-9a72-4871-b850-d2a16c252fd2",
+      "name": "Wait",
+      "webhookId": "cba15f1a-9cad-43f7-ac3a-b56cc493243d"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "code_in_java": {
+      "main": [
+        [
+          {
+            "node": "edit_fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "edit_fields": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request6",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Run an Actor and get dataset1": {
+      "main": [
+        [
+          {
+            "node": "enriquecer_leads",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request2": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request6",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request1": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request6",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "receber_busca_dashboard": {
+      "main": [
+        [
+          {
+            "node": "verificar_reserva",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "webhook_prospectar_lead": {
+      "main": [
+        [
+          {
+            "node": "set_prospectar_dados",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "set_prospectar_dados": {
+      "main": [
+        [
+          {
+            "node": "enviar_prospecao_webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "finalizar_busca": {
+      "main": [
+        [
+          {
+            "node": "verificar_resultado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request6": {
+      "main": [
+        [
+          {
+            "node": "patch_busca_concluida",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "verificar_resultado": {
+      "main": [
+        [
+          {
+            "node": "marcar_busca_erro",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "code_in_java",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "definir_termos": {
+      "main": [
+        [
+          {
+            "node": "Run an Actor and get dataset1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "enriquecer_leads": {
+      "main": [
+        [
+          {
+            "node": "finalizar_busca",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "verificar_reserva": {
+      "main": [
+        [
+          {
+            "node": "reserva_suficiente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "reserva_suficiente": {
+      "main": [
+        [
+          {
+            "node": "ativar_reserva",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "definir_termos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ativar_reserva": {
+      "main": [
+        [
+          {
+            "node": "patch_reserva_concluida",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "enviar_prospecao_webhook": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "enviar_prospecao_webhook1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "timeSavedMode": "fixed",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "versionId": "566dc1af-acfb-4026-98b0-3f6a0462e7d5",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "87b3704f56ee98b2abf0c87369308958924a10455c534145841b196eb55380ee"
+  },
+  "id": "LcFuy6656JXbtuoO",
+  "tags": []
+}
