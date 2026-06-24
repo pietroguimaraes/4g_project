@@ -13,7 +13,7 @@ export async function PATCH(request: NextRequest) {
     .from('leads')
     .update({ status: 'PROSPECTADOS' })
     .eq('status', 'LOCALIZADOS')
-    .select('id, telefone, empresa')
+    .select('id, telefone, empresa, cidade')
 
   if (error) {
     return NextResponse.json({ error: 'Erro ao aprovar leads em lote' }, { status: 500 })
@@ -26,7 +26,7 @@ export async function PATCH(request: NextRequest) {
       fetch(prospectuarUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ telefone: lead.telefone, empresa: lead.empresa }),
+        body: JSON.stringify({ telefone: lead.telefone, empresa: lead.empresa, cidade: lead.cidade }),
       }).catch(() => {})
     }
   }

@@ -147,7 +147,7 @@ export async function PATCH(
     .from('leads')
     .update(updates)
     .eq('telefone', telefone)
-    .select('id, empresa, telefone, status, email')
+    .select('id, empresa, telefone, status, email, cidade')
     .single()
 
   if (dbError) {
@@ -191,7 +191,7 @@ export async function PATCH(
         await fetch(prospectuarUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ telefone: data.telefone, empresa: data.empresa }),
+          body: JSON.stringify({ telefone: data.telefone, empresa: data.empresa, cidade: data.cidade }),
         })
       } catch {
         // Webhook falhou mas status já foi atualizado — segue em frente
