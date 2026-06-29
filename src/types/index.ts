@@ -32,6 +32,9 @@ export interface Lead {
   search_id?: string
   tipo_loja?: string
   fonte_telefone?: string
+  fonte?: 'google_maps' | 'instagram'
+  instagram_handle?: string
+  instagram_followers?: number
   cnpj?: string
   bairro?: string
   endereco?: string
@@ -47,6 +50,7 @@ export interface Search {
   estado: string
   cidade: string
   tipo_loja?: string
+  fonte?: 'google_maps' | 'instagram' | 'ambos'
   quantidade: number
   status: SearchStatus
   total_encontrados?: number

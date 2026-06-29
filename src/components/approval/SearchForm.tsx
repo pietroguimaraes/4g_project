@@ -65,6 +65,7 @@ export function SearchForm({ onSearchComplete }: SearchFormProps) {
   const [cidades, setCidades] = useState<{id: number; nome: string}[]>([])
   const [loadingCidades, setLoadingCidades] = useState(false)
   const [tipoLoja, setTipoLoja] = useState('')
+  const [fonte, setFonte] = useState<'google_maps' | 'instagram' | 'ambos'>('google_maps')
   const [quantidade, setQuantidade] = useState(10)
   const [loading, setLoading] = useState(false)
   const [feedback, setFeedback] = useState<{ tipo: 'erro' | 'sucesso' | 'progresso'; mensagem: string } | null>(null)
@@ -177,11 +178,13 @@ export function SearchForm({ onSearchComplete }: SearchFormProps) {
         municipio_id: municipioId ?? undefined,
         bairro: bairro || undefined,
         quantidade,
-        tipo_loja: tipoLoja
+        tipo_loja: tipoLoja,
+        fonte,
       })
+      const fonteLabel = fonte === 'google_maps' ? 'Google Maps' : fonte === 'instagram' ? 'Instagram' : 'Google Maps e Instagram'
       setFeedback({
         tipo: 'progresso',
-        mensagem: `Buscando empresas do tipo "${tipoLoja}" em ${cidade}... Isso pode levar alguns minutos.`,
+        mensagem: `Buscando empresas do tipo "${tipoLoja}" em ${cidade} via ${fonteLabel}... Isso pode levar alguns minutos.`,
       })
       setEstado('')
       setCidade('')
@@ -266,6 +269,31 @@ export function SearchForm({ onSearchComplete }: SearchFormProps) {
             className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:text-gray-400"
             disabled={isFormDisabled}
           />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Fonte de busca</label>
+          <div className="flex gap-2">
+            {([
+              { value: 'google_maps', label: '🗺️ Google Maps' },
+              { value: 'instagram', label: '📸 Instagram' },
+              { value: 'ambos', label: '⚡ Ambos' },
+            ] as const).map((op) => (
+              <button
+                key={op.value}
+                type="button"
+                onClick={() => setFonte(op.value)}
+                disabled={isFormDisabled}
+                className={`flex-1 py-2 px-2 rounded-md text-xs font-medium border transition-colors ${
+                  fonte === op.value
+                    ? 'bg-blue-600 text-white border-blue-600'
+                    : 'bg-white text-gray-600 border-gray-300 hover:border-blue-400'
+                } disabled:opacity-50 disabled:cursor-not-allowed`}
+              >
+                {op.label}
+              </button>
+            ))}
+          </div>
         </div>
 
         <div>

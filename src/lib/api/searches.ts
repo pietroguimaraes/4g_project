@@ -4,6 +4,7 @@ export interface CreateSearchData {
   cidade: string
   quantidade: number
   tipo_loja: string
+  fonte?: 'google_maps' | 'instagram' | 'ambos'
   municipio_id?: number
   bairro?: string
 }
