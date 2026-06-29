@@ -5,10 +5,11 @@ import { createSearch } from '@/lib/api/searches'
 import type { Search } from '@/types'
 
 const TIPOS_LOJA = [
-  'Lojas de Variedades/1,99/miudezas/bazares',
-  'Lojas de brinquedos',
-  'Lojas de artigos esportivos',
+  'Supermercados',
+  'Hipermercados',
+  'Redes de mercado',
 ]
+
 
 const CAPITAIS: Record<string, string> = {
   AC: 'Rio Branco',      AL: 'Maceió',          AP: 'Macapá',
@@ -59,10 +60,13 @@ interface SearchFormProps {
 export function SearchForm({ onSearchComplete }: SearchFormProps) {
   const [estado, setEstado] = useState('')
   const [cidade, setCidade] = useState('')
-  const [cidades, setCidades] = useState<string[]>([])
+  const [municipioId, setMunicipioId] = useState<number | null>(null)
+  const [bairro, setBairro] = useState('')
+  const [cidades, setCidades] = useState<{id: number; nome: string}[]>([])
   const [loadingCidades, setLoadingCidades] = useState(false)
-  const [quantidade, setQuantidade] = useState('')
   const [tipoLoja, setTipoLoja] = useState('')
+  const [fonte, setFonte] = useState<'google_maps' | 'instagram' | 'ambos'>('google_maps')
+  const [quantidade, setQuantidade] = useState(10)
   const [loading, setLoading] = useState(false)
   const [feedback, setFeedback] = useState<{ tipo: 'erro' | 'sucesso' | 'progresso'; mensagem: string } | null>(null)
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -72,17 +76,29 @@ export function SearchForm({ onSearchComplete }: SearchFormProps) {
     return () => stopPolling()
   }, [])
 
+  const cidadesCache = useRef<Record<string, {id: number; nome: string}[]>>({})
+
   useEffect(() => {
     if (!estado) {
       setCidades([])
       setCidade('')
       return
     }
+    if (cidadesCache.current[estado]) {
+      setCidades(cidadesCache.current[estado])
+      setCidade('')
+      setMunicipioId(null)
+      return
+    }
     setLoadingCidades(true)
     setCidade('')
+    setMunicipioId(null)
     fetch(`https://servicodados.ibge.gov.br/api/v1/localidades/estados/${estado}/municipios?orderBy=nome`)
       .then(r => r.json())
-      .then((data: { nome: string }[]) => setCidades(data.map(m => m.nome)))
+      .then((data: { id: number; nome: string }[]) => {
+        cidadesCache.current[estado] = data.map(m => ({ id: m.id, nome: m.nome }))
+        setCidades(data.map(m => ({ id: m.id, nome: m.nome })))
+      })
       .catch(() => setCidades([]))
       .finally(() => setLoadingCidades(false))
   }, [estado])
@@ -117,18 +133,11 @@ export function SearchForm({ onSearchComplete }: SearchFormProps) {
           setLoading(false)
           const entregues = search.quantidade_entregue ?? 0
           const rodadas = search.num_rodadas ?? 1
-          const sufixoRodadas = rodadas > 1 ? ` (${rodadas} rodadas de busca)` : ''
-          if (entregues >= quantidadePedida) {
-            setFeedback({
-              tipo: 'sucesso',
-              mensagem: `Busca concluída! ${entregues} de ${quantidadePedida} empresas encontradas${sufixoRodadas}.`,
-            })
-          } else {
-            setFeedback({
-              tipo: 'sucesso',
-              mensagem: `Busca concluída: ${entregues} de ${quantidadePedida} empresas encontradas${sufixoRodadas}. Essa cidade pode não ter mais lojas desse tipo disponíveis no Google Maps.`,
-            })
-          }
+          const sufixoRodadas = rodadas > 1 ? ` (${rodadas} rodadas)` : ''
+          setFeedback({
+            tipo: 'sucesso',
+            mensagem: `Busca concluída! ${entregues} empresa${entregues !== 1 ? 's' : ''} encontrada${entregues !== 1 ? 's' : ''}${sufixoRodadas} e enviadas para aprovação.`,
+          })
           onSearchComplete?.()
         } else if (search.status === 'ERRO') {
           stopPolling()
@@ -158,25 +167,31 @@ export function SearchForm({ onSearchComplete }: SearchFormProps) {
       setFeedback({ tipo: 'erro', mensagem: 'Selecione o tipo de loja.' })
       return
     }
-    const qty = Number(quantidade)
-    if (!quantidade || qty < 1 || qty > 100) {
-      setFeedback({ tipo: 'erro', mensagem: 'A quantidade deve ser entre 1 e 100.' })
-      return
-    }
 
     stopPolling()
     setLoading(true)
     try {
-      const result = await createSearch({ pais: 'Brasil', estado, cidade, quantidade: qty, tipo_loja: tipoLoja })
+      const result = await createSearch({
+        pais: 'Brasil',
+        estado,
+        cidade,
+        municipio_id: municipioId ?? undefined,
+        bairro: bairro || undefined,
+        quantidade,
+        tipo_loja: tipoLoja,
+        fonte,
+      })
+      const fonteLabel = fonte === 'google_maps' ? 'Google Maps' : fonte === 'instagram' ? 'Instagram' : 'Google Maps e Instagram'
       setFeedback({
         tipo: 'progresso',
-        mensagem: `⏳ Buscando ${qty} empresa${qty > 1 ? 's' : ''} do tipo "${tipoLoja}" em ${cidade}... Isso pode levar alguns minutos.`,
+        mensagem: `Buscando empresas do tipo "${tipoLoja}" em ${cidade} via ${fonteLabel}... Isso pode levar alguns minutos.`,
       })
       setEstado('')
       setCidade('')
-      setQuantidade('')
+      setMunicipioId(null)
+      setBairro('')
       setTipoLoja('')
-      startPolling(result.id, qty)
+      startPolling(result.id, quantidade)
     } catch (err) {
       const motivo = err instanceof Error ? err.message : 'Erro desconhecido.'
       setFeedback({ tipo: 'erro', mensagem: `Não foi possível iniciar a busca. Motivo: ${motivo}` })
@@ -184,9 +199,13 @@ export function SearchForm({ onSearchComplete }: SearchFormProps) {
     }
   }
 
+  const isFormDisabled = loading || loadingCidades
+
   return (
     <form onSubmit={handleSubmit} className="bg-white rounded-lg border p-6 shadow-sm max-w-lg">
-      <h2 className="font-semibold text-gray-800 mb-4">Nova Busca de Empresas</h2>
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="font-semibold text-gray-800">Nova Busca de Empresas</h2>
+      </div>
 
       <div className="grid grid-cols-1 gap-4">
         <div>
@@ -194,8 +213,8 @@ export function SearchForm({ onSearchComplete }: SearchFormProps) {
           <select
             value={estado}
             onChange={(e) => setEstado(e.target.value)}
-            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-            disabled={loading}
+            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white disabled:text-gray-400"
+            disabled={isFormDisabled}
           >
             <option value="">Selecione...</option>
             {ESTADOS.map((e) => (
@@ -205,12 +224,19 @@ export function SearchForm({ onSearchComplete }: SearchFormProps) {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Cidade</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Cidade {loadingCidades && <span className="text-blue-500 font-normal">(carregando...)</span>}
+          </label>
           <select
             value={cidade}
-            onChange={(e) => setCidade(e.target.value)}
+            onChange={(e) => {
+              const nomeSelecionado = e.target.value
+              setCidade(nomeSelecionado)
+              const found = cidades.find(c => c.nome === nomeSelecionado)
+              setMunicipioId(found ? found.id : null)
+            }}
             className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white disabled:text-gray-400"
-            disabled={loading || loadingCidades || !estado}
+            disabled={isFormDisabled || !estado}
           >
             <option value="">
               {!estado ? 'Selecione o estado primeiro' : loadingCidades ? 'Carregando cidades...' : 'Selecione...'}
@@ -218,19 +244,15 @@ export function SearchForm({ onSearchComplete }: SearchFormProps) {
             {[...cidades]
               .sort((a, b) => {
                 const capital = CAPITAIS[estado]
-                if (a === capital) return -1
-                if (b === capital) return 1
+                if (a.nome === capital) return -1
+                if (b.nome === capital) return 1
                 return 0
               })
               .map((c) => {
-                const isCapital = CAPITAIS[estado] === c
+                const isCapital = CAPITAIS[estado] === c.nome
                 return (
-                  <option
-                    key={c}
-                    value={c}
-                    style={isCapital ? { color: '#b8860b', fontWeight: '700' } : undefined}
-                  >
-                    {isCapital ? `★ ${c}` : c}
+                  <option key={c.id} value={c.nome} style={isCapital ? { color: '#b8860b', fontWeight: '700' } : undefined}>
+                    {isCapital ? `★ ${c.nome}` : c.nome}
                   </option>
                 )
               })}
@@ -238,12 +260,49 @@ export function SearchForm({ onSearchComplete }: SearchFormProps) {
         </div>
 
         <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Bairro <span className="text-gray-400 font-normal">(opcional)</span></label>
+          <input
+            type="text"
+            value={bairro}
+            onChange={(e) => setBairro(e.target.value)}
+            placeholder="Ex: Centro, Vila Madalena..."
+            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:text-gray-400"
+            disabled={isFormDisabled}
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Fonte de busca</label>
+          <div className="flex gap-2">
+            {([
+              { value: 'google_maps', label: '🗺️ Google Maps' },
+              { value: 'instagram', label: '📸 Instagram' },
+              { value: 'ambos', label: '⚡ Ambos' },
+            ] as const).map((op) => (
+              <button
+                key={op.value}
+                type="button"
+                onClick={() => setFonte(op.value)}
+                disabled={isFormDisabled}
+                className={`flex-1 py-2 px-2 rounded-md text-xs font-medium border transition-colors ${
+                  fonte === op.value
+                    ? 'bg-blue-600 text-white border-blue-600'
+                    : 'bg-white text-gray-600 border-gray-300 hover:border-blue-400'
+                } disabled:opacity-50 disabled:cursor-not-allowed`}
+              >
+                {op.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Tipo de loja</label>
           <select
             value={tipoLoja}
             onChange={(e) => setTipoLoja(e.target.value)}
-            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-            disabled={loading}
+            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white disabled:text-gray-400"
+            disabled={isFormDisabled}
           >
             <option value="">Selecione...</option>
             {TIPOS_LOJA.map((tipo) => (
@@ -253,16 +312,15 @@ export function SearchForm({ onSearchComplete }: SearchFormProps) {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Quantidade de empresas (1–100)</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Quantidade de empresas</label>
           <input
             type="number"
-            value={quantidade}
-            onChange={(e) => setQuantidade(e.target.value)}
             min={1}
             max={100}
-            placeholder="Ex: 50"
-            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            disabled={loading}
+            value={quantidade}
+            onChange={(e) => setQuantidade(Math.max(1, Math.min(100, Number(e.target.value))))}
+            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:text-gray-400"
+            disabled={isFormDisabled}
           />
         </div>
       </div>
@@ -281,7 +339,7 @@ export function SearchForm({ onSearchComplete }: SearchFormProps) {
 
       <button
         type="submit"
-        disabled={loading || loadingCidades}
+        disabled={isFormDisabled}
         className="mt-4 w-full bg-blue-600 text-white rounded-md py-2 text-sm font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
       >
         {loading ? 'Iniciando busca...' : 'Iniciar Busca'}

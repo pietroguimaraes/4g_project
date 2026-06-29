@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Body inválido' }, { status: 400 })
   }
 
-  const { empresa, telefone, website, cidade, estado, pais, search_id, status, manual, tipo_loja } = body as Record<string, unknown>
+  const { empresa, telefone, email, website, cidade, estado, pais, search_id, status, manual, tipo_loja, _fonte_telefone, fonte, instagram_handle, instagram_followers, cnpj, bairro, endereco, cep } = body as Record<string, unknown>
 
   if (!empresa || !telefone) {
     return NextResponse.json({ error: 'Campos obrigatórios: empresa, telefone' }, { status: 400 })
@@ -50,6 +50,7 @@ export async function POST(request: NextRequest) {
       {
         empresa: String(empresa),
         telefone: String(telefone),
+        email: email ? String(email) : null,
         website: website ? String(website) : null,
         cidade: cidade ? String(cidade) : null,
         estado: estado ? String(estado) : null,
@@ -57,6 +58,14 @@ export async function POST(request: NextRequest) {
         search_id: search_id ? String(search_id) : null,
         status: leadStatus,
         tipo_loja: tipo_loja ? String(tipo_loja) : null,
+        fonte_telefone: _fonte_telefone ? String(_fonte_telefone) : null,
+        fonte: fonte ? String(fonte) : 'google_maps',
+        instagram_handle: instagram_handle ? String(instagram_handle) : null,
+        instagram_followers: instagram_followers ? Number(instagram_followers) : null,
+        cnpj: cnpj ? String(cnpj) : null,
+        bairro: bairro ? String(bairro) : null,
+        endereco: endereco ? String(endereco) : null,
+        cep: cep ? String(cep) : null,
         manual: manual === true,
       },
       { onConflict: 'telefone', ignoreDuplicates: true }

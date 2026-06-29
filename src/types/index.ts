@@ -9,7 +9,7 @@ export type LeadStatus =
   | 'RESERVA'
   | 'PEQUENOS'
 
-export type LeadCategoria = 'DOMÉSTICOS' | 'ESPORTIVOS' | 'MISTO'
+export type LeadCategoria = 'SUPERMERCADO' | 'ATACADISTA' | 'DISTRIBUIDORA'
 
 export type SearchStatus = 'PENDENTE' | 'CONCLUÍDA' | 'ERRO'
 
@@ -17,6 +17,7 @@ export interface Lead {
   id: string
   empresa: string
   telefone: string
+  email?: string
   website?: string
   cidade?: string
   estado?: string
@@ -30,6 +31,14 @@ export interface Lead {
   qtd_reengajamentos: number
   search_id?: string
   tipo_loja?: string
+  fonte_telefone?: string
+  fonte?: 'google_maps' | 'instagram'
+  instagram_handle?: string
+  instagram_followers?: number
+  cnpj?: string
+  bairro?: string
+  endereco?: string
+  cep?: string
   manual: boolean
   created_at: string
   updated_at: string
@@ -41,11 +50,14 @@ export interface Search {
   estado: string
   cidade: string
   tipo_loja?: string
+  fonte?: 'google_maps' | 'instagram' | 'ambos'
   quantidade: number
   status: SearchStatus
   total_encontrados?: number
   quantidade_bruta?: number
   quantidade_entregue?: number
   num_rodadas?: number
+  municipio_id?: number
+  bairro?: string
   created_at: string
 }

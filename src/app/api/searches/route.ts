@@ -1,6 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
+export async function GET() {
+  const supabase = await createClient()
+
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  if (authError || !user) {
+    return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+  }
+
+  const { count } = await supabase
+    .from('searches')
+    .select('*', { count: 'exact', head: true })
+
+  return NextResponse.json({ count: count ?? 0 })
+}
+
 export async function POST(request: NextRequest) {
   const supabase = await createClient()
 
@@ -16,16 +31,16 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Body inválido' }, { status: 400 })
   }
 
-  const { pais, estado, cidade, quantidade, tipo_loja } = body as Record<string, unknown>
+  const { pais, estado, cidade, tipo_loja, quantidade, fonte, municipio_id, bairro } = body as Record<string, unknown>
 
-  if (!pais || !estado || !cidade || quantidade === undefined || !tipo_loja) {
+  if (!pais || !estado || !cidade || !tipo_loja) {
     return NextResponse.json({ error: 'Todos os campos são obrigatórios' }, { status: 400 })
   }
 
-  const qty = Number(quantidade)
-  if (!Number.isInteger(qty) || qty < 1 || qty > 100) {
-    return NextResponse.json({ error: 'Quantidade deve ser entre 1 e 100' }, { status: 400 })
-  }
+  const qty = quantidade ? Number(quantidade) : 10
+  const fonteValida = (['google_maps', 'instagram', 'ambos'] as const).includes(fonte as 'google_maps' | 'instagram' | 'ambos')
+    ? (fonte as 'google_maps' | 'instagram' | 'ambos')
+    : 'google_maps'
 
   const { data: search, error: dbError } = await supabase
     .from('searches')
@@ -35,7 +50,10 @@ export async function POST(request: NextRequest) {
       cidade: String(cidade),
       quantidade: qty,
       tipo_loja: String(tipo_loja),
+      fonte: fonteValida,
       status: 'PENDENTE',
+      municipio_id: municipio_id ? Number(municipio_id) : null,
+      bairro: bairro ? String(bairro) : null,
     })
     .select('id')
     .single()
@@ -57,6 +75,9 @@ export async function POST(request: NextRequest) {
           cidade: String(cidade),
           quantidade: qty,
           tipo_loja: String(tipo_loja),
+          fonte: fonteValida,
+          municipio_id: municipio_id ? Number(municipio_id) : null,
+          bairro: bairro ? String(bairro) : null,
         }),
       })
     } catch {
