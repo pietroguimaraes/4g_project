@@ -9,7 +9,7 @@ export type LeadStatus =
   | 'RESERVA'
   | 'PEQUENOS'
 
-export type LeadCategoria = 'SUPERMERCADO' | 'ATACADISTA' | 'DISTRIBUIDORA'
+export type LeadCategoria = 'DOMÉSTICOS' | 'ESPORTIVOS' | 'MISTO'
 
 export type SearchStatus = 'PENDENTE' | 'CONCLUÍDA' | 'ERRO'
 
