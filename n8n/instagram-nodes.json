@@ -1,0 +1,268 @@
+{
+  "name": "Instagram Branch — Nós Novos v55",
+  "nodes": [
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "check-fonte-instagram",
+              "leftValue": "={{ $('receber_busca_dashboard').first().json.body.fonte }}",
+              "rightValue": "instagram",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "aa000001-0000-0000-0000-000000000001",
+      "name": "verificar_fonte",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [-95296, -96620]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "check-fonte-ambos",
+              "leftValue": "={{ $('receber_busca_dashboard').first().json.body.fonte }}",
+              "rightValue": "ambos",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "aa000002-0000-0000-0000-000000000002",
+      "name": "verificar_fonte_ambos",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [-95072, -96620]
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $('receber_busca_dashboard').first().json.body;\nconst tipoLoja = body.tipo_loja || '';\nconst cidade = body.cidade || '';\nconst estado = body.estado || '';\n\nconst HASHTAGS = {\n  'Lojas de artigos esportivos': ['lojaesportiva', 'materialesportivo', 'bolasdefutebol', 'patins', 'beachtennis'],\n  'Lojas de brinquedos': ['lojadebrinquedos', 'brinquedosinfantis', 'lojakids', 'brinquedos'],\n  'Lojas de Variedades/1,99/miudezas/bazares': ['lojavariedades', 'bazar', 'importados', 'loja199', 'bazarvariedades'],\n  'Supermercados': ['supermercado', 'mercadinho', 'minimercado'],\n  'Hipermercados': ['hipermercado', 'supermercado', 'atacadista'],\n  'Eletroportáteis/eletrônicos': ['lojaeletronicos', 'lojacelulares', 'techstore', 'eletronicos'],\n};\n\nconst hashtags = HASHTAGS[tipoLoja] || ['lojavariedades', 'lojaesportiva', 'lojadebrinquedos'];\nconst searchTerms = hashtags.map(h => `#${h} ${cidade}`);\n\nreturn [{\n  json: {\n    search_id: body.search_id,\n    cidade,\n    estado,\n    tipo_loja: tipoLoja,\n    quantidade: parseInt(body.quantidade) || 30,\n    fonte: 'instagram',\n    hashtags,\n    searchTerms,\n    locationQuery: `${cidade}, ${estado}, Brasil`,\n  }\n}];"
+      },
+      "id": "aa000003-0000-0000-0000-000000000003",
+      "name": "definir_termos_instagram",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-94848, -96520],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "Run actor and get dataset",
+        "actorId": {
+          "__rl": true,
+          "value": "apify~instagram-hashtag-scraper",
+          "mode": "id"
+        },
+        "customBody": "={{ JSON.stringify({\n  hashtags: $json.hashtags.slice(0,3),\n  resultsLimit: $json.quantidade * 5,\n  addParentData: true\n}) }}"
+      },
+      "id": "aa000004-0000-0000-0000-000000000004",
+      "name": "apify_instagram",
+      "type": "@apify/n8n-nodes-apify.apify",
+      "typeVersion": 1,
+      "position": [-94624, -96520],
+      "credentials": {
+        "apifyApi": {
+          "id": "JYuzlKJEKcJzF1aO",
+          "name": "Git Hub"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst results = [];\nconst seen = new Set();\n\nfor (const item of items) {\n  const profile = item.json;\n  const bio = profile.biography || profile.bio || profile.ownerBiography || '';\n  const username = profile.username || profile.ownerUsername || '';\n  const followers = profile.followersCount || profile.ownerFollowersCount || profile.followers || 0;\n  const nome = profile.fullName || profile.ownerFullName || profile.name || username;\n  const website = profile.externalUrl || profile.ownerExternalUrl || profile.website || '';\n\n  const phoneRegex = /(?:\\+55\\s?)?(?:\\(?\\d{2}\\)?\\s?)(?:9\\s?)?\\d{4}[-\\s]?\\d{4}/g;\n  const phones = bio.match(phoneRegex);\n\n  if (!phones || phones.length === 0) continue;\n\n  let telefone = phones[0].replace(/\\D/g, '');\n  if (telefone.startsWith('55') && telefone.length >= 12) {\n    telefone = telefone.substring(2);\n  }\n  if (telefone.length === 10) {\n    const firstAfterDDD = telefone.charAt(2);\n    if (['6','7','8','9'].includes(firstAfterDDD)) {\n      telefone = telefone.substring(0,2) + '9' + telefone.substring(2);\n    } else {\n      continue;\n    }\n  }\n  if (telefone.length !== 11) continue;\n  if (telefone.charAt(2) !== '9') continue;\n  telefone = '55' + telefone;\n\n  if (seen.has(telefone)) continue;\n  seen.add(telefone);\n\n  results.push({\n    json: {\n      empresa: nome,\n      telefone,\n      website,\n      cidade: $('definir_termos_instagram').first().json.cidade,\n      estado: $('definir_termos_instagram').first().json.estado,\n      tipo_loja: $('definir_termos_instagram').first().json.tipo_loja,\n      search_id: $('definir_termos_instagram').first().json.search_id,\n      fonte: 'instagram',\n      instagram_handle: username,\n      instagram_followers: followers,\n      status: 'LOCALIZADOS',\n      _status_final: 'LOCALIZADOS',\n      _tipo_loja: $('definir_termos_instagram').first().json.tipo_loja,\n      _fonte_telefone: 'instagram_bio',\n    }\n  });\n}\n\nreturn results.length > 0 ? results : [{ json: { _empty: true } }];"
+      },
+      "id": "aa000005-0000-0000-0000-000000000005",
+      "name": "extrair_telefone_instagram",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-94400, -96520],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://4g-project.vercel.app/api/leads",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIyNjkyODc2My1iOGQ5LTQ5YTAtYmY3Yy0wNGIzMmFjMmNhNTUiLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwiaWF0IjoxNzc2MjgzNjUxfQ.gc_mgxaHzURxlIs5W0iR2RH2yIQ4BV7pEbyueJ95nGU"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"empresa\": \"{{ $json.empresa }}\",\n  \"telefone\": \"{{ $json.telefone }}\",\n  \"website\": \"{{ $json.website }}\",\n  \"cidade\": \"{{ $json.cidade }}\",\n  \"estado\": \"{{ $json.estado }}\",\n  \"pais\": \"BR\",\n  \"status\": \"{{ $json._status_final }}\",\n  \"tipo_loja\": \"{{ $json._tipo_loja }}\",\n  \"fonte\": \"instagram\",\n  \"instagram_handle\": \"{{ $json.instagram_handle }}\"\n}",
+        "options": {
+          "batching": {
+            "batch": {
+              "batchSize": 1
+            }
+          }
+        }
+      },
+      "id": "aa000006-0000-0000-0000-000000000006",
+      "name": "salvar_lead_instagram",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [-94176, -96520],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "={{ 'https://4g-project.vercel.app/api/searches/' + $('receber_busca_dashboard').first().json.body.search_id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIyNjkyODc2My1iOGQ5LTQ5YTAtYmY3Yy0wNGIzMmFjMmNhNTUiLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwiaWF0IjoxNzc2MjgzNjUxfQ.gc_mgxaHzURxlIs5W0iR2RH2yIQ4BV7pEbyueJ95nGU"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  status: 'CONCLUÍDA',\n  quantidade_bruta: $input.all().length,\n  quantidade_entregue: $input.all().filter(i => !i.json._empty).length,\n  num_rodadas: 1\n}) }}",
+        "options": {}
+      },
+      "id": "aa000007-0000-0000-0000-000000000007",
+      "name": "finalizar_busca_instagram",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [-93952, -96520],
+      "onError": "continueRegularOutput"
+    }
+  ],
+  "connections": {
+    "verificar_fonte": {
+      "main": [
+        [
+          {
+            "node": "definir_termos_instagram",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "verificar_fonte_ambos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "verificar_fonte_ambos": {
+      "main": [
+        [
+          {
+            "node": "definir_termos_instagram",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "definir_termos",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "definir_termos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "definir_termos_instagram": {
+      "main": [
+        [
+          {
+            "node": "apify_instagram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "apify_instagram": {
+      "main": [
+        [
+          {
+            "node": "extrair_telefone_instagram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "extrair_telefone_instagram": {
+      "main": [
+        [
+          {
+            "node": "salvar_lead_instagram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "salvar_lead_instagram": {
+      "main": [
+        [
+          {
+            "node": "finalizar_busca_instagram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "_instrucoes": {
+    "passo1": "No n8n, vá no fluxo Fluxo_4g — Dashboard v2",
+    "passo2": "Clique no menu ... > Import nodes from JSON > cole este arquivo",
+    "passo3": "Os 7 nós novos vão aparecer no canvas. Posicione-os ao lado do nó reserva_suficiente",
+    "passo4": "IMPORTANTE: delete a seta de reserva_suficiente [FALSE] -> definir_termos",
+    "passo5": "Crie nova seta: reserva_suficiente [FALSE] -> verificar_fonte",
+    "passo6": "Verifique que verificar_fonte_ambos [TRUE] está conectado a AMBOS definir_termos_instagram E definir_termos",
+    "nota_actor": "O nó apify_instagram usa a mesma credencial 'Git Hub' (id JYuzlKJEKcJzF1aO) do nó Google Maps existente"
+  }
+}
