@@ -16,7 +16,7 @@ const FONTE_BADGE: Record<string, { label: string; color: string }> = {
 }
 
 const ORIGEM_BADGE: Record<string, { label: string; color: string }> = {
-  'google_maps': { label: '🗺️ Google Maps', color: 'bg-pink-100 text-pink-700' },
+  'google_maps': { label: '🗺️ Google Maps', color: 'bg-orange-100 text-orange-700' },
   'instagram':   { label: '📸 Instagram',   color: 'bg-purple-100 text-purple-700' },
 }
 
