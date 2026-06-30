@@ -20,17 +20,17 @@ export function KanbanColumn({ status, title, leads, borderColor, headerColor, o
   return (
     <div
       ref={setNodeRef}
-      className={`rounded-lg border-t-4 ${headerColor} shadow-sm flex flex-col transition-colors ${isOver ? 'bg-gray-50' : 'bg-white'}`}
+      className={`rounded-xl border-t-4 ${headerColor} shadow-lg flex flex-col transition-colors ${isOver ? 'bg-gray-800' : 'bg-gray-900'}`}
     >
-      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
-        <h2 className="font-semibold text-sm text-gray-700">{title}</h2>
-        <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-700">
+        <h2 className="font-semibold text-sm text-gray-100">{title}</h2>
+        <span className="text-xs bg-gray-700 text-gray-300 px-2 py-0.5 rounded-full font-medium">
           {leads.length}
         </span>
       </div>
       <div className="flex flex-col gap-2 p-3 flex-1 min-h-[80px]">
         {leads.length === 0 ? (
-          <p className="text-gray-400 text-xs">Nenhum lead nesta etapa.</p>
+          <p className="text-gray-500 text-xs">Nenhum lead nesta etapa.</p>
         ) : (
           leads.map((lead) => (
             <KanbanCard key={lead.id} lead={lead} borderColor={borderColor} onDeleted={onLeadDeleted} isPequenos={isPequenos} />

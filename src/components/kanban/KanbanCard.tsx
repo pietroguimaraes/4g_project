@@ -38,9 +38,21 @@ const CATEGORIA_BADGE: Record<LeadCategoria, { label: string; color: string }> =
   'MISTO': { label: 'Misto', color: 'bg-yellow-100 text-yellow-700' },
 }
 
-const ORIGEM_STYLE: Record<string, { label: string; cardBg: string; badgeColor: string }> = {
-  'google_maps': { label: '🗺️ Maps',      cardBg: 'bg-orange-50 border-orange-200', badgeColor: 'bg-orange-200 text-orange-800' },
-  'instagram':   { label: '📸 Instagram', cardBg: 'bg-purple-50 border-purple-200', badgeColor: 'bg-purple-200 text-purple-800' },
+const ORIGEM_STYLE: Record<string, { label: string; cardBg: string; textColor: string; subColor: string; badgeColor: string }> = {
+  'google_maps': {
+    label: '🗺️ Maps',
+    cardBg: 'bg-orange-500',
+    textColor: 'text-white',
+    subColor: 'text-orange-100',
+    badgeColor: 'bg-orange-700 text-orange-100',
+  },
+  'instagram': {
+    label: '📸 Instagram',
+    cardBg: 'bg-purple-600',
+    textColor: 'text-white',
+    subColor: 'text-purple-100',
+    badgeColor: 'bg-purple-800 text-purple-100',
+  },
 }
 
 function formatDate(dateStr: string) {
@@ -113,9 +125,9 @@ export function KanbanCard({ lead, borderColor, onDeleted, isPequenos }: KanbanC
       ref={setNodeRef}
       {...(isDraggable ? { ...listeners, ...attributes } : {})}
       style={{ opacity: isDragging ? 0.4 : 1 }}
-      className={`rounded-lg border border-l-4 ${borderColor} p-3 shadow-sm ${isDraggable ? 'cursor-grab active:cursor-grabbing' : ''} select-none ${origem ? origem.cardBg : 'bg-white border-gray-200'}`}
+      className={`rounded-xl border-l-4 ${borderColor} p-3 shadow-md ${isDraggable ? 'cursor-grab active:cursor-grabbing' : ''} select-none transition-transform hover:scale-[1.01] ${origem ? `${origem.cardBg} border-transparent` : 'bg-gray-800 border-gray-600'}`}
     >
-      <p className="font-semibold text-gray-900 text-sm truncate">{lead.empresa}</p>
+      <p className={`font-semibold text-sm truncate ${origem ? origem.textColor : 'text-gray-100'}`}>{lead.empresa}</p>
       <div className="flex flex-wrap gap-1 mt-1">
         {lead.manual && (
           <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-purple-100 text-purple-700">
@@ -123,7 +135,7 @@ export function KanbanCard({ lead, borderColor, onDeleted, isPequenos }: KanbanC
           </span>
         )}
         {origem && (
-          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${origem.badgeColor}`}>
+          <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${origem.badgeColor}`}>
             {origem.label}
           </span>
         )}
@@ -134,7 +146,7 @@ export function KanbanCard({ lead, borderColor, onDeleted, isPequenos }: KanbanC
           <button
             onPointerDown={(e) => e.stopPropagation()}
             onClick={(e) => { e.stopPropagation(); abrirConversa() }}
-            className="mt-2 w-full text-xs bg-indigo-50 text-indigo-600 border border-indigo-200 rounded px-2 py-1 hover:bg-indigo-100 transition-colors"
+            className="mt-2 w-full text-xs bg-white/20 text-white border border-white/30 rounded-lg px-2 py-1 hover:bg-white/30 transition-colors font-medium"
           >
             Ver conversa
           </button>
@@ -194,7 +206,7 @@ export function KanbanCard({ lead, borderColor, onDeleted, isPequenos }: KanbanC
             <button
               onPointerDown={(e) => e.stopPropagation()}
               onClick={(e) => e.stopPropagation()}
-              className="flex-1 text-xs bg-gray-100 text-gray-600 rounded px-2 py-1 hover:bg-gray-200 transition-colors"
+              className="flex-1 text-xs bg-white/20 text-white border border-white/30 rounded-lg px-2 py-1 hover:bg-white/30 transition-colors font-medium"
             >
               Ver dados
             </button>
