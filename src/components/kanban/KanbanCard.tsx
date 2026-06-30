@@ -38,9 +38,9 @@ const CATEGORIA_BADGE: Record<LeadCategoria, { label: string; color: string }> =
   'MISTO': { label: 'Misto', color: 'bg-yellow-100 text-yellow-700' },
 }
 
-const ORIGEM_BADGE: Record<string, { label: string; color: string }> = {
-  'google_maps': { label: '🗺️ Maps', color: 'bg-orange-100 text-orange-700' },
-  'instagram':   { label: '📸 Instagram', color: 'bg-purple-100 text-purple-700' },
+const ORIGEM_STYLE: Record<string, { label: string; cardBg: string; badgeColor: string }> = {
+  'google_maps': { label: '🗺️ Maps',      cardBg: 'bg-orange-50 border-orange-200', badgeColor: 'bg-orange-200 text-orange-800' },
+  'instagram':   { label: '📸 Instagram', cardBg: 'bg-purple-50 border-purple-200', badgeColor: 'bg-purple-200 text-purple-800' },
 }
 
 function formatDate(dateStr: string) {
@@ -69,7 +69,7 @@ export function KanbanCard({ lead, borderColor, onDeleted, isPequenos }: KanbanC
   })
 
   const badge = lead.categoria ? CATEGORIA_BADGE[lead.categoria] : null
-  const origem = lead.fonte ? ORIGEM_BADGE[lead.fonte] : null
+  const origem = lead.fonte ? ORIGEM_STYLE[lead.fonte] : null
 
   async function handleTransfer(pequeno = false) {
     setTransferring(true)
@@ -113,7 +113,7 @@ export function KanbanCard({ lead, borderColor, onDeleted, isPequenos }: KanbanC
       ref={setNodeRef}
       {...(isDraggable ? { ...listeners, ...attributes } : {})}
       style={{ opacity: isDragging ? 0.4 : 1 }}
-      className={`bg-white rounded-lg border border-gray-200 border-l-4 ${borderColor} p-3 shadow-sm ${isDraggable ? 'cursor-grab active:cursor-grabbing' : ''} select-none`}
+      className={`rounded-lg border border-l-4 ${borderColor} p-3 shadow-sm ${isDraggable ? 'cursor-grab active:cursor-grabbing' : ''} select-none ${origem ? origem.cardBg : 'bg-white border-gray-200'}`}
     >
       <p className="font-semibold text-gray-900 text-sm truncate">{lead.empresa}</p>
       <div className="flex flex-wrap gap-1 mt-1">
@@ -123,7 +123,7 @@ export function KanbanCard({ lead, borderColor, onDeleted, isPequenos }: KanbanC
           </span>
         )}
         {origem && (
-          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${origem.color}`}>
+          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${origem.badgeColor}`}>
             {origem.label}
           </span>
         )}
