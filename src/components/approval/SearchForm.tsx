@@ -5,9 +5,9 @@ import { createSearch } from '@/lib/api/searches'
 import type { Search } from '@/types'
 
 const TIPOS_LOJA = [
-  'Supermercados',
-  'Hipermercados',
-  'Redes de mercado',
+  'Lojas de Variedades/1,99/miudezas/bazares',
+  'Lojas de brinquedos',
+  'Lojas de artigos esportivos',
 ]
 
 
