@@ -16,8 +16,8 @@ const FONTE_BADGE: Record<string, { label: string; color: string }> = {
 }
 
 const ORIGEM_BADGE: Record<string, { label: string; color: string }> = {
-  'google_maps': { label: '🗺️ Google Maps', color: 'bg-blue-50 text-blue-600' },
-  'instagram':   { label: '📸 Instagram',   color: 'bg-pink-50 text-pink-600' },
+  'google_maps': { label: '🗺️ Google Maps', color: 'bg-pink-100 text-pink-700' },
+  'instagram':   { label: '📸 Instagram',   color: 'bg-purple-100 text-purple-700' },
 }
 
 interface LeadCardProps {
