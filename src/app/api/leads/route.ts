@@ -75,7 +75,7 @@ export async function POST(request: NextRequest) {
 
   // PGRST116 = nenhuma linha retornada (lead duplicado ignorado por ignoreDuplicates:true)
   if (dbError && dbError.code !== 'PGRST116') {
-    return NextResponse.json({ error: 'Erro ao salvar lead' }, { status: 500 })
+    return NextResponse.json({ error: 'Erro ao salvar lead', detail: dbError.message, code: dbError.code }, { status: 500 })
   }
 
   if (!data) {
