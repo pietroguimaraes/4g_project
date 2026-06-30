@@ -15,6 +15,11 @@ const FONTE_BADGE: Record<string, { label: string; color: string }> = {
   'maps_fallback': { label: 'Número comercial', color: 'bg-amber-100 text-amber-700' },
 }
 
+const ORIGEM_BADGE: Record<string, { label: string; color: string }> = {
+  'google_maps': { label: '🗺️ Google Maps', color: 'bg-blue-50 text-blue-600' },
+  'instagram':   { label: '📸 Instagram',   color: 'bg-pink-50 text-pink-600' },
+}
+
 interface LeadCardProps {
   lead: Lead
 }
@@ -22,6 +27,7 @@ interface LeadCardProps {
 export function LeadCard({ lead }: LeadCardProps) {
   const badge = lead.categoria ? CATEGORIA_BADGE[lead.categoria] : null
   const fonte = lead.fonte_telefone ? FONTE_BADGE[lead.fonte_telefone] : null
+  const origem = lead.fonte ? ORIGEM_BADGE[lead.fonte] : null
   return (
     <div className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
       <p className="font-semibold text-gray-900 text-sm truncate">{lead.empresa}</p>
@@ -29,6 +35,11 @@ export function LeadCard({ lead }: LeadCardProps) {
         {badge && (
           <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${badge.color}`}>
             {badge.label}
+          </span>
+        )}
+        {origem && (
+          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${origem.color}`}>
+            {origem.label}
           </span>
         )}
         {fonte && (
@@ -43,6 +54,12 @@ export function LeadCard({ lead }: LeadCardProps) {
       )}
       {lead.cnpj && (
         <p className="text-gray-500 text-xs mt-0.5">CNPJ: {formatarCNPJ(lead.cnpj)}</p>
+      )}
+      {lead.instagram_handle && (
+        <p className="text-pink-500 text-xs mt-0.5">
+          @{lead.instagram_handle}
+          {lead.instagram_followers ? ` · ${lead.instagram_followers.toLocaleString('pt-BR')} seguidores` : ''}
+        </p>
       )}
       {lead.cidade && (
         <p className="text-gray-400 text-xs mt-0.5">{lead.cidade}</p>
