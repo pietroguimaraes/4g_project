@@ -38,6 +38,11 @@ const CATEGORIA_BADGE: Record<LeadCategoria, { label: string; color: string }> =
   'MISTO': { label: 'Misto', color: 'bg-yellow-100 text-yellow-700' },
 }
 
+const ORIGEM_BADGE: Record<string, { label: string; color: string }> = {
+  'google_maps': { label: '🗺️ Maps', color: 'bg-pink-100 text-pink-700' },
+  'instagram':   { label: '📸 Instagram', color: 'bg-purple-100 text-purple-700' },
+}
+
 function formatDate(dateStr: string) {
   return new Date(dateStr).toLocaleDateString('pt-BR')
 }
@@ -64,6 +69,7 @@ export function KanbanCard({ lead, borderColor, onDeleted, isPequenos }: KanbanC
   })
 
   const badge = lead.categoria ? CATEGORIA_BADGE[lead.categoria] : null
+  const origem = lead.fonte ? ORIGEM_BADGE[lead.fonte] : null
 
   async function handleTransfer(pequeno = false) {
     setTransferring(true)
@@ -110,11 +116,18 @@ export function KanbanCard({ lead, borderColor, onDeleted, isPequenos }: KanbanC
       className={`bg-white rounded-lg border border-gray-200 border-l-4 ${borderColor} p-3 shadow-sm ${isDraggable ? 'cursor-grab active:cursor-grabbing' : ''} select-none`}
     >
       <p className="font-semibold text-gray-900 text-sm truncate">{lead.empresa}</p>
-      {lead.manual && (
-        <span className="inline-block mt-1 text-xs px-2 py-0.5 rounded-full font-medium bg-purple-100 text-purple-700">
-          Manual
-        </span>
-      )}
+      <div className="flex flex-wrap gap-1 mt-1">
+        {lead.manual && (
+          <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-purple-100 text-purple-700">
+            Manual
+          </span>
+        )}
+        {origem && (
+          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${origem.color}`}>
+            {origem.label}
+          </span>
+        )}
+      </div>
 
       {lead.data_resposta && (
         <>
