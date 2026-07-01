@@ -769,7 +769,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"empresa\": \"{{ $json.empresa }}\",\n  \"telefone\": \"{{ $json.telefone }}\",\n  \"website\": \"{{ $json.website }}\",\n  \"cidade\": \"{{ $json.cidade }}\",\n  \"estado\": \"{{ $json.estado }}\",\n  \"pais\": \"BR\",\n  \"status\": \"{{ $json._status_final }}\",\n  \"tipo_loja\": \"{{ $json._tipo_loja }}\",\n  \"fonte\": \"instagram\",\n  \"instagram_handle\": \"{{ $json.instagram_handle }}\"\n}",
+        "jsonBody": "={\n  \"empresa\": \"{{ $json.empresa }}\",\n  \"telefone\": \"{{ $json.telefone }}\",\n  \"website\": \"{{ $json.website }}\",\n  \"cidade\": \"{{ $json.cidade }}\",\n  \"estado\": \"{{ $json.estado }}\",\n  \"pais\": \"BR\",\n  \"status\": \"{{ $json._status_final }}\",\n  \"tipo_loja\": \"{{ $json._tipo_loja }}\",\n  \"fonte\": \"instagram\",\n  \"instagram_handle\": \"{{ $json.instagram_handle }}\",\n  \"instagram_followers\": {{ $json.instagram_followers || 0 }},\n  \"search_id\": \"{{ $json.search_id }}\",\n  \"_fonte_telefone\": \"{{ $json._fonte_telefone }}\"\n}",
         "options": {
           "batching": {
             "batch": {
