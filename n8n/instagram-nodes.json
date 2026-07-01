@@ -28,7 +28,10 @@
       "name": "verificar_fonte",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [-95296, -96620]
+      "position": [
+        -95296,
+        -96620
+      ]
     },
     {
       "parameters": {
@@ -57,7 +60,10 @@
       "name": "verificar_fonte_ambos",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [-95072, -96620]
+      "position": [
+        -95072,
+        -96620
+      ]
     },
     {
       "parameters": {
@@ -67,7 +73,10 @@
       "name": "definir_termos_instagram",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [-94848, -96520],
+      "position": [
+        -94848,
+        -96520
+      ],
       "onError": "continueRegularOutput"
     },
     {
@@ -84,7 +93,10 @@
       "name": "apify_instagram",
       "type": "@apify/n8n-nodes-apify.apify",
       "typeVersion": 1,
-      "position": [-94624, -96520],
+      "position": [
+        -94624,
+        -96520
+      ],
       "credentials": {
         "apifyApi": {
           "id": "JYuzlKJEKcJzF1aO",
@@ -95,13 +107,16 @@
     },
     {
       "parameters": {
-        "jsCode": "const items = $input.all();\nconst results = [];\nconst seen = new Set();\n\nfor (const item of items) {\n  const profile = item.json;\n  const bio = profile.biography || profile.bio || profile.ownerBiography || '';\n  const username = profile.username || profile.ownerUsername || '';\n  const followers = profile.followersCount || profile.ownerFollowersCount || profile.followers || 0;\n  const nome = profile.fullName || profile.ownerFullName || profile.name || username;\n  const website = profile.externalUrl || profile.ownerExternalUrl || profile.website || '';\n\n  const phoneRegex = /(?:\\+55\\s?)?(?:\\(?\\d{2}\\)?\\s?)(?:9\\s?)?\\d{4}[-\\s]?\\d{4}/g;\n  const phones = bio.match(phoneRegex);\n\n  if (!phones || phones.length === 0) continue;\n\n  let telefone = phones[0].replace(/\\D/g, '');\n  if (telefone.startsWith('55') && telefone.length >= 12) {\n    telefone = telefone.substring(2);\n  }\n  if (telefone.length === 10) {\n    const firstAfterDDD = telefone.charAt(2);\n    if (['6','7','8','9'].includes(firstAfterDDD)) {\n      telefone = telefone.substring(0,2) + '9' + telefone.substring(2);\n    } else {\n      continue;\n    }\n  }\n  if (telefone.length !== 11) continue;\n  if (telefone.charAt(2) !== '9') continue;\n  telefone = '55' + telefone;\n\n  if (seen.has(telefone)) continue;\n  seen.add(telefone);\n\n  results.push({\n    json: {\n      empresa: nome,\n      telefone,\n      website,\n      cidade: $('definir_termos_instagram').first().json.cidade,\n      estado: $('definir_termos_instagram').first().json.estado,\n      tipo_loja: $('definir_termos_instagram').first().json.tipo_loja,\n      search_id: $('definir_termos_instagram').first().json.search_id,\n      fonte: 'instagram',\n      instagram_handle: username,\n      instagram_followers: followers,\n      status: 'LOCALIZADOS',\n      _status_final: 'LOCALIZADOS',\n      _tipo_loja: $('definir_termos_instagram').first().json.tipo_loja,\n      _fonte_telefone: 'instagram_bio',\n    }\n  });\n}\n\nreturn results.length > 0 ? results : [{ json: { _empty: true } }];"
+        "jsCode": "const items = $input.all();\nconst results = [];\nconst seen = new Set();\n\nfor (const item of items) {\n  const profile = item.json;\n  const bio = profile.biography || profile.bio || profile.ownerBiography || '';\n  const username = profile.username || profile.ownerUsername || '';\n  const followers = profile.followersCount || profile.ownerFollowersCount || profile.followers || 0;\n  const nome = profile.fullName || profile.ownerFullName || profile.name || username;\n  const website = profile.externalUrl || profile.ownerExternalUrl || profile.website || '';\n\n  if (!username) continue;\n\n  const phoneRegex = /(?:\\+55\\s?)?(?:\\(?\\d{2}\\)?\\s?)(?:9\\s?)?\\d{4}[-\\s]?\\d{4}/g;\n  const phones = bio.match(phoneRegex);\n\n  let telefone = null;\n  let _fonte_telefone = 'instagram_username';\n\n  if (phones && phones.length > 0) {\n    let raw = phones[0].replace(/\\D/g, '');\n    if (raw.startsWith('55') && raw.length >= 12) raw = raw.substring(2);\n    if (raw.length === 10) {\n      const firstAfterDDD = raw.charAt(2);\n      if (['6','7','8','9'].includes(firstAfterDDD)) {\n        raw = raw.substring(0,2) + '9' + raw.substring(2);\n      } else {\n        raw = null;\n      }\n    }\n    if (raw && raw.length === 11 && raw.charAt(2) === '9') {\n      telefone = '55' + raw;\n      _fonte_telefone = 'instagram_bio';\n    }\n  }\n\n  // Fallback: sem telefone valido -> usa @username como identificador\n  if (!telefone) {\n    telefone = '@' + username;\n  }\n\n  if (seen.has(telefone)) continue;\n  seen.add(telefone);\n\n  results.push({\n    json: {\n      empresa: nome,\n      telefone,\n      website,\n      cidade: $('definir_termos_instagram').first().json.cidade,\n      estado: $('definir_termos_instagram').first().json.estado,\n      tipo_loja: $('definir_termos_instagram').first().json.tipo_loja,\n      search_id: $('definir_termos_instagram').first().json.search_id,\n      fonte: 'instagram',\n      instagram_handle: username,\n      instagram_followers: followers,\n      status: 'LOCALIZADOS',\n      _status_final: 'LOCALIZADOS',\n      _tipo_loja: $('definir_termos_instagram').first().json.tipo_loja,\n      _fonte_telefone,\n    }\n  });\n}\n\nreturn results.length > 0 ? results : [{ json: { _empty: true } }];"
       },
       "id": "aa000005-0000-0000-0000-000000000005",
       "name": "extrair_telefone_instagram",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [-94400, -96520],
+      "position": [
+        -94400,
+        -96520
+      ],
       "onError": "continueRegularOutput"
     },
     {
@@ -136,7 +151,10 @@
       "name": "salvar_lead_instagram",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
-      "position": [-94176, -96520],
+      "position": [
+        -94176,
+        -96520
+      ],
       "onError": "continueRegularOutput"
     },
     {
@@ -165,7 +183,10 @@
       "name": "finalizar_busca_instagram",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
-      "position": [-93952, -96520],
+      "position": [
+        -93952,
+        -96520
+      ],
       "onError": "continueRegularOutput"
     }
   ],
