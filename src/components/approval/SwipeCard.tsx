@@ -39,7 +39,13 @@ export function SwipeCard({ lead, onApprove, onDiscard }: SwipeCardProps) {
     opacity: decided ? 0 : 1,
   }
 
-  let cardClass = 'bg-white border-gray-200'
+  const baseCard = lead.fonte === 'instagram'
+    ? 'bg-purple-600 border-purple-700'
+    : lead.fonte === 'google_maps'
+      ? 'bg-orange-500 border-orange-600'
+      : 'bg-gray-800 border-gray-700'
+
+  let cardClass = baseCard
   let label = ''
   if (isApproving) {
     cardClass = 'bg-green-50 border-green-400'
@@ -75,17 +81,17 @@ export function SwipeCard({ lead, onApprove, onDiscard }: SwipeCardProps) {
           {label}
         </span>
       )}
-      <p className="font-semibold text-gray-900 text-sm truncate pr-16">{lead.empresa}</p>
+      <p className={`font-semibold text-sm truncate pr-16 ${isApproving || isDiscarding ? 'text-gray-900' : lead.fonte ? 'text-white' : 'text-gray-900'}`}>{lead.empresa}</p>
       {badge && (
         <span className={`inline-block mt-1 text-xs px-2 py-0.5 rounded-full font-medium ${badge.color}`}>
           {badge.label}
         </span>
       )}
-      <p className="text-gray-500 text-xs mt-1">{lead.telefone}</p>
+      <p className={`text-xs mt-1 ${isApproving || isDiscarding ? 'text-gray-500' : lead.fonte ? 'text-white/80' : 'text-gray-500'}`}>{lead.telefone}</p>
       {lead.cidade && (
-        <p className="text-gray-400 text-xs mt-0.5">{lead.cidade}</p>
+        <p className={`text-xs mt-0.5 ${isApproving || isDiscarding ? 'text-gray-400' : lead.fonte ? 'text-white/60' : 'text-gray-400'}`}>{lead.cidade}</p>
       )}
-      <p className="text-gray-300 text-xs mt-2">← descartar · aprovar →</p>
+      <p className={`text-xs mt-2 ${isApproving || isDiscarding ? 'text-gray-300' : lead.fonte ? 'text-white/50' : 'text-gray-300'}`}>← descartar · aprovar →</p>
     </div>
   )
 }
