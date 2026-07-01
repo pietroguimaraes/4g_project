@@ -1,0 +1,882 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 8 * * 1-5"
+            }
+          ]
+        }
+      },
+      "id": "2d3ba227-0f4e-4790-b665-a8089025ae3f",
+      "name": "schedule_diario",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -113760,
+        -91080
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "busca-victor-selfe",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "a643317f-4394-4eec-af25-bfd98c715577",
+      "name": "webhook_dashboard",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -113760,
+        -90888
+      ],
+      "webhookId": "victor-selfe-v2"
+    },
+    {
+      "parameters": {
+        "jsCode": "var hoje = new Date();\nvar dia  = hoje.getDate();\nvar semana = dia <= 7 ? 1 : dia <= 14 ? 2 : dia <= 21 ? 3 : 4;\n\nvar isWebhook = false;\nvar user_id   = '';\ntry {\n  var wh = $('webhook_dashboard');\n  if (wh && wh.isExecuted) {\n    isWebhook = true;\n    var body = wh.first().json.body || wh.first().json;\n    user_id = body.user_id || '';\n  }\n} catch(e) {}\n\nconsole.log('Semana:', semana, '| Dia:', dia, '| Source:', isWebhook ? 'webhook' : 'schedule');\nreturn [{ json: { semana_rotacao: semana, user_id, _source: isWebhook ? 'webhook' : 'schedule' } }];"
+      },
+      "id": "0e4a8695-fe8f-4161-b637-68489c8c8dfc",
+      "name": "calcular_semana",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -113536,
+        -90984
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=https://tuctjosvxdzbfnyvvodc.supabase.co/rest/v1/victor_empresas?semana_rotacao=eq.{{ $json.semana_rotacao }}&ativo=eq.true&select=*&limit=2",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR1Y3Rqb3N2eGR6YmZueXZ2b2RjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxMTk3MzYsImV4cCI6MjA5NDY5NTczNn0.jPjPQz18lsEdpQLSxQCz2kP0uObAQ1XTs1Kj5qANcko"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR1Y3Rqb3N2eGR6YmZueXZ2b2RjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxMTk3MzYsImV4cCI6MjA5NDY5NTczNn0.jPjPQz18lsEdpQLSxQCz2kP0uObAQ1XTs1Kj5qANcko"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "ba2032b1-dc3a-4b0c-8e93-fb590dedff43",
+      "name": "buscar_empresa_supabase",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -113312,
+        -90984
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "var items = $input.all();\nvar empresa = null;\nfor (var i = 0; i < items.length; i++) {\n  if (items[i].json && items[i].json.id) { empresa = items[i].json; break; }\n}\nif (!empresa) {\n  console.log('Sem empresa ativa para semana', $('calcular_semana').first().json.semana_rotacao);\n  return [{ json: { _sem_empresa: true } }];\n}\nconsole.log('Empresa ativa:', empresa.nome, '| Meta/dia:', empresa.max_leads_dia);\nreturn [{ json: { ...empresa, _sem_empresa: false } }];"
+      },
+      "id": "0c57bd44-f2cb-4ea9-88ba-3236984eb73a",
+      "name": "verificar_empresa",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -113088,
+        -90984
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json._sem_empresa }}",
+              "rightValue": false,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "e676c3fd-7c0d-4a85-b9dc-ec69f9367ec5",
+      "name": "if_empresa_ativa",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -112864,
+        -90984
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://tuctjosvxdzbfnyvvodc.supabase.co/rest/v1/searches",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR1Y3Rqb3N2eGR6YmZueXZ2b2RjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxMTk3MzYsImV4cCI6MjA5NDY5NTczNn0.jPjPQz18lsEdpQLSxQCz2kP0uObAQ1XTs1Kj5qANcko"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR1Y3Rqb3N2eGR6YmZueXZ2b2RjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxMTk3MzYsImV4cCI6MjA5NDY5NTczNn0.jPjPQz18lsEdpQLSxQCz2kP0uObAQ1XTs1Kj5qANcko"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=representation"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ JSON.stringify({ pais: \"Brasil\", estado: ($json.regioes && $json.regioes[0]) || \"Nacional\", cidade: \"Nacional\", quantidade: Math.min($json.max_leads_dia || 14, 100), status: \"PENDENTE\", tipo_loja: $json.nome, fonte: \"linkedin\", empresa_id: $json.id }) }}",
+        "options": {}
+      },
+      "id": "93f09d69-c947-4a32-97cb-ece826092888",
+      "name": "criar_search",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -112640,
+        -91080
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "var empresa = $('verificar_empresa').first().json;\n\nvar cargos  = empresa.cargos  || [];\nvar regioes = empresa.regioes || ['Brasil'];\nvar metaDia = empresa.max_leads_dia   || 14;\nvar buffer  = empresa.buffer_multiplo || 2.5;\n// Mínimo 50 perfis para ter volume suficiente no teste\nvar maxItems = Math.max(Math.ceil(metaDia * buffer), 50);\n\nvar ESTADO_MAP = {\n  'Brasil': 'Brazil', 'Nacional': 'Brazil',\n  'SP': 'Sao Paulo, Brazil', 'São Paulo': 'Sao Paulo, Brazil',\n  'RJ': 'Rio de Janeiro, Brazil',\n  'RS': 'Rio Grande do Sul, Brazil',\n  'PR': 'Parana, Brazil',\n  'SC': 'Santa Catarina, Brazil',\n  'MG': 'Minas Gerais, Brazil',\n  'BA': 'Bahia, Brazil',\n  'SE': 'Sergipe, Brazil',\n  'Santo André': 'Santo Andre, Sao Paulo, Brazil',\n  'São Bernardo do Campo': 'Sao Bernardo do Campo, Sao Paulo, Brazil',\n  'São Caetano do Sul': 'Sao Caetano do Sul, Sao Paulo, Brazil',\n  'Diadema': 'Diadema, Sao Paulo, Brazil',\n  'Mauá': 'Maua, Sao Paulo, Brazil',\n  'Ribeirão Pires': 'Ribeirao Pires, Sao Paulo, Brazil',\n  'Rio Grande da Serra': 'Rio Grande da Serra, Sao Paulo, Brazil'\n};\n\nvar locationsFilter = regioes.map(function(r) { return ESTADO_MAP[r] || r; });\n\n// Mapeamento genérico: min_funcionarios → faixas do LinkedIn\n// Inclui todas as faixas onde o mínimo da faixa >= min_funcionarios\n// Ex: min=1000 → ['1001-5000','5001-10000','10001+']  (1001>=1000 ✓)\n//     min=500  → ['501-1000','1001-5000','5001-10000','10001+']\n//     null     → sem filtro (todas as empresas)\nvar ALL_BANDS = [\n  { min: 1,     value: '1-10' },\n  { min: 11,    value: '11-50' },\n  { min: 51,    value: '51-200' },\n  { min: 201,   value: '201-500' },\n  { min: 501,   value: '501-1000' },\n  { min: 1001,  value: '1001-5000' },\n  { min: 5001,  value: '5001-10000' },\n  { min: 10001, value: '10001+' }\n];\n\n// Override: webhook pode enviar min_funcionarios (busca manual do dashboard)\nvar minFuncOverride = 0;\ntry {\n  var wb = $(\"webhook_dashboard\");\n  if (wb && wb.isExecuted) {\n    var wbBody = wb.first().json.body || wb.first().json;\n    if (wbBody.min_funcionarios) minFuncOverride = Number(wbBody.min_funcionarios);\n  }\n} catch(e) {}\nvar minFuncEfetivo = minFuncOverride > 0 ? minFuncOverride : (empresa.min_funcionarios || 0);\nconsole.log(\"min_funcionarios efetivo:\", minFuncEfetivo, \"(override:\", minFuncOverride, \"| DB:\", empresa.min_funcionarios, \")\");\n\nvar companyHeadcountFilter = [];\nif (minFuncEfetivo) {\n  companyHeadcountFilter = ALL_BANDS\n    .filter(function(b) { return b.min >= minFuncEfetivo; })\n    .map(function(b) { return b.value; });\n}\n\nconsole.log('Empresa:', empresa.nome, '| Cargos:', cargos, '| Regioes:', locationsFilter, '| Max:', maxItems, '| Headcount:', companyHeadcountFilter);\n\nif (!cargos.length) {\n  return [{ json: { _erro: 'sem_cargos', empresa_nome: empresa.nome } }];\n}\n\nvar harvestapiInput = {\n  profileScraperMode: 'Full + email search',\n  searchQuery:        cargos.join(' OR '),\n  locationsFilter:    locationsFilter,\n  maxItems:           maxItems,\n  proxyConfiguration: { useApifyProxy: true }\n};\n\nif (companyHeadcountFilter.length) {\n  harvestapiInput.companyHeadcountFilter = companyHeadcountFilter;\n}\n\nreturn [{ json: {\n  empresa_id:        empresa.id,\n  empresa_nome:      empresa.nome,\n  template_email:    empresa.template_email,\n  cargos:            cargos,\n  max_leads_dia:     metaDia,\n  _harvestapi_input: harvestapiInput,\n  _max_items:        maxItems,\n  _meta_dia:         metaDia,\n  _categoria:        (empresa.segmento || empresa.nome).toUpperCase().replace(/\\s+/g, '_').substring(0, 30)\n} }];"
+      },
+      "id": "155dab99-5399-491d-aa54-d87e2c5e49c5",
+      "name": "montar_harvestapi",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -112416,
+        -91080
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.apify.com/v2/acts/harvestapi~linkedin-profile-search/runs?token=APIFY_TOKEN_AQUI",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ JSON.stringify($json._harvestapi_input) }}",
+        "options": {}
+      },
+      "id": "2a3c4c8a-5287-4e9f-b847-ab5b2fab89a2",
+      "name": "iniciar_run_apify",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -112192,
+        -91080
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "amount": 15,
+        "unit": "minutes"
+      },
+      "id": "d466f86b-ea9d-4cee-a3d1-1d67d125aa87",
+      "name": "aguardar_run_apify",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        -111968,
+        -91080
+      ],
+      "webhookId": "7ae143c9-b4d5-41ec-8610-28164aff6b99"
+    },
+    {
+      "parameters": {
+        "url": "https://api.apify.com/v2/acts/harvestapi~linkedin-profile-search/runs/last/dataset/items?token=APIFY_TOKEN_AQUI&clean=true&format=json",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "d168348d-0ac0-4c77-b379-548f8d7a5d89",
+      "name": "buscar_dataset_apify",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -111744,
+        -91080
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "var DOMINIOS_PESSOAIS = [\n  'gmail.com','hotmail.com','yahoo.com','outlook.com',\n  'uol.com.br','bol.com.br','terra.com.br','ig.com.br',\n  'yahoo.com.br','live.com','msn.com','icloud.com',\n  'me.com','globomail.com','r7.com','oi.com.br'\n];\n\n// Lê contexto da empresa (cargos esperados, empresa_id, etc.)\nvar meta = {};\ntry { meta = $('montar_harvestapi').first().json; } catch(e) {}\n\nvar cargosEsperados = (meta.cargos || []);\n\n// Palavras-chave extraídas dos cargos (>4 chars para ignorar \"de\", \"do\", \"da\")\nvar termosValidos = [];\ncargosEsperados.forEach(function(c) {\n  c.toLowerCase().split(' ').forEach(function(p) {\n    if (p.length > 4 && termosValidos.indexOf(p) === -1) termosValidos.push(p);\n  });\n});\n\nconsole.log('Termos de cargo validos:', termosValidos);\n\n// ── FILTRO 1: CARGO ──────────────────────────────────────────────────────────\n// Verifica se o cargo do lead contém ao menos uma palavra-chave dos cargos esperados\n// Ex: \"Comprador de Congelados\" → [\"comprador\",\"congelados\",\"pereciveis\",\"gerente\",\"compras\",\"diretor\"]\nfunction cargoValido(cargoLead) {\n  if (!termosValidos.length) return true; // sem restrição se empresa sem cargos\n  if (!cargoLead) return false;           // sem cargo = não passa\n  var lower = cargoLead.toLowerCase();\n  return termosValidos.some(function(t) { return lower.indexOf(t) !== -1; });\n}\n\n// ── FILTRO 2: SMTP ───────────────────────────────────────────────────────────\n// HarvestAPI retorna campo de verificação SMTP. Status inválidos = rejeitado.\n// Se campo não existir: aceita (modo \"Full + email search\" já faz SMTP por default)\nvar STATUS_INVALIDOS = ['invalid', 'bounce', 'catch_all', 'unknown', 'disposable', 'false'];\n\nfunction smtpValido(perfil) {\n  var status = perfil.emailVerified || perfil.emailStatus || perfil.smtpValid ||\n    perfil.verificationStatus || perfil.email_verified || null;\n\n  if (status === null || status === undefined) return true; // campo ausente = aceita\n  if (typeof status === 'boolean') return status;\n  var s = String(status).toLowerCase();\n  return STATUS_INVALIDOS.indexOf(s) === -1;\n}\n\nfunction extrairEmail(emailField) {\n  if (!emailField) return null;\n  if (typeof emailField === 'string') return emailField;\n  if (typeof emailField === 'object' && !Array.isArray(emailField)) {\n    return emailField.email || emailField.address || emailField.value || null;\n  }\n  if (Array.isArray(emailField)) {\n    for (var i = 0; i < emailField.length; i++) {\n      var v = extrairEmail(emailField[i]);\n      if (v) return v;\n    }\n  }\n  return null;\n}\n\nvar perfis = $input.all();\nvar resultado = [];\nvar desc = { sem_email: 0, pessoal: 0, cargo_invalido: 0, smtp_invalido: 0 };\n\nfor (var i = 0; i < perfis.length; i++) {\n  var j = perfis[i].json;\n\n  // Email\n  var email = extrairEmail(j.email || j.workEmail || j.personalEmail || j.emails || null);\n  if (!email) { desc.sem_email++; continue; }\n  email = email.toLowerCase().trim();\n\n  var dominio = email.split('@')[1] || '';\n  if (DOMINIOS_PESSOAIS.indexOf(dominio) !== -1) { desc.pessoal++; continue; }\n\n  // FILTRO 1: Cargo\n  var cargo = j.jobTitle || j.headline || j.title || '';\n  if (!cargoValido(cargo)) {\n    desc.cargo_invalido++;\n    console.log('Cargo rejeitado:', cargo, '| email:', email);\n    continue;\n  }\n\n  // FILTRO 2: SMTP\n  if (!smtpValido(j)) {\n    desc.smtp_invalido++;\n    console.log('SMTP invalido:', email, '| status:', j.emailStatus || j.emailVerified);\n    continue;\n  }\n\n  var nome        = ((j.firstName || '') + ' ' + (j.lastName || '')).trim() || j.name || '';\n  var empresa_lead = j.companyName || j.currentCompany || '';\n\n  resultado.push({ json: {\n    email:             email,\n    nome:              nome,\n    cargo:             cargo,\n    empresa_nome_lead: empresa_lead,\n    empresa_id:        meta.empresa_id,\n    empresa_nome:      meta.empresa_nome,\n    template_email:    meta.template_email,\n    linkedin_url:      j.linkedinUrl || j.url || '',\n    _dominio_email:    dominio,\n    _categoria:        meta._categoria\n  }});\n}\n\nconsole.log(\n  'Resultado:', resultado.length, 'leads validos /',\n  perfis.length, 'perfis |',\n  'sem_email:', desc.sem_email,\n  '| pessoal:', desc.pessoal,\n  '| cargo_invalido:', desc.cargo_invalido,\n  '| smtp_invalido:', desc.smtp_invalido\n);\n\nif (resultado.length === 0) {\n  return [{ json: { _sem_resultados: true, empresa_nome: meta.empresa_nome, _desc: desc } }];\n}\nreturn resultado;"
+      },
+      "id": "57d3d579-d784-4d54-97b4-22e5f4507c2c",
+      "name": "processar_leads",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -111520,
+        -91080
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "c2",
+              "leftValue": "={{ !$json._sem_resultados }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "5aed5748-97aa-4307-b68c-c7fbdea304e0",
+      "name": "if_tem_leads",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -111296,
+        -91080
+      ]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "83e73087-e290-4ab4-a47e-a9f4c4a0f68a",
+      "name": "loop_lead",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        -111072,
+        -91248
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=https://tuctjosvxdzbfnyvvodc.supabase.co/rest/v1/leads_enviados?email=eq.{{ encodeURIComponent($json.email) }}&enviado_em=gte.{{ new Date(Date.now() - 60*24*60*60*1000).toISOString() }}&select=email&limit=1",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR1Y3Rqb3N2eGR6YmZueXZ2b2RjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxMTk3MzYsImV4cCI6MjA5NDY5NTczNn0.jPjPQz18lsEdpQLSxQCz2kP0uObAQ1XTs1Kj5qANcko"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR1Y3Rqb3N2eGR6YmZueXZ2b2RjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxMTk3MzYsImV4cCI6MjA5NDY5NTczNn0.jPjPQz18lsEdpQLSxQCz2kP0uObAQ1XTs1Kj5qANcko"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "e8abed91-d7f5-4c74-a6a2-57682a9276fd",
+      "name": "checar_dedup",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -110848,
+        -91440
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "var items = $input.all();\nvar jaEnviado = items.some(function(i) { return i.json && i.json.email; });\nvar lead = $('loop_lead').item.json;\nconsole.log(jaEnviado ? 'DEDUP: duplicado →' : 'DEDUP: novo →', lead.email);\nreturn [{ json: { ...lead, _ja_enviado: jaEnviado } }];"
+      },
+      "id": "c056ef0b-4792-4260-ac28-916d1e125625",
+      "name": "verificar_dedup",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -110624,
+        -91440
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "c3",
+              "leftValue": "={{ $json._ja_enviado }}",
+              "rightValue": false,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "36036db3-9c9e-49f5-a4cb-05526d4c3be8",
+      "name": "if_lead_novo",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -110400,
+        -91440
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://tuctjosvxdzbfnyvvodc.supabase.co/rest/v1/leads",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR1Y3Rqb3N2eGR6YmZueXZ2b2RjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxMTk3MzYsImV4cCI6MjA5NDY5NTczNn0.jPjPQz18lsEdpQLSxQCz2kP0uObAQ1XTs1Kj5qANcko"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR1Y3Rqb3N2eGR6YmZueXZ2b2RjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxMTk3MzYsImV4cCI6MjA5NDY5NTczNn0.jPjPQz18lsEdpQLSxQCz2kP0uObAQ1XTs1Kj5qANcko"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=representation"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ JSON.stringify({ empresa: $json.empresa_nome_lead || $json.empresa_nome, telefone: \"email:\" + $json.email, email: $json.email, status: \"PROSPECTADOS\", categoria: $json._categoria, empresa_id: $json.empresa_id, cargo_encontrado: $json.cargo, empresa_encontrada: $json.empresa_nome_lead, dominio_email: $json._dominio_email }) }}",
+        "options": {}
+      },
+      "id": "346e6eb4-d468-4082-a862-863af4297070",
+      "name": "salvar_lead",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -110176,
+        -91440
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://tuctjosvxdzbfnyvvodc.supabase.co/rest/v1/leads_enviados",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR1Y3Rqb3N2eGR6YmZueXZ2b2RjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxMTk3MzYsImV4cCI6MjA5NDY5NTczNn0.jPjPQz18lsEdpQLSxQCz2kP0uObAQ1XTs1Kj5qANcko"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR1Y3Rqb3N2eGR6YmZueXZ2b2RjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxMTk3MzYsImV4cCI6MjA5NDY5NTczNn0.jPjPQz18lsEdpQLSxQCz2kP0uObAQ1XTs1Kj5qANcko"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "resolution=ignore-duplicates,return=minimal"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ JSON.stringify({ email: $json.email, empresa_id: $json.empresa_id }) }}",
+        "options": {}
+      },
+      "id": "f5e6b8b3-57fd-4f74-a235-20f9d4b5b02e",
+      "name": "registrar_enviado",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -109952,
+        -91296
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "url": "=https://tuctjosvxdzbfnyvvodc.supabase.co/rest/v1/leads?empresa_id=eq.{{ $(\"verificar_empresa\").first().json.id }}&created_at=gte.{{ new Date().toISOString().split(\"T\")[0] }}&status=eq.PROSPECTADOS&select=email,empresa,cargo_encontrado,empresa_encontrada,dominio_email&order=created_at.desc",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR1Y3Rqb3N2eGR6YmZueXZ2b2RjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxMTk3MzYsImV4cCI6MjA5NDY5NTczNn0.jPjPQz18lsEdpQLSxQCz2kP0uObAQ1XTs1Kj5qANcko"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR1Y3Rqb3N2eGR6YmZueXZ2b2RjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxMTk3MzYsImV4cCI6MjA5NDY5NTczNn0.jPjPQz18lsEdpQLSxQCz2kP0uObAQ1XTs1Kj5qANcko"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "e49bde7c-1d0f-4857-893f-95568c2f6016",
+      "name": "buscar_leads_salvos",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -110848,
+        -91248
+      ],
+      "alwaysOutputData": true,
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Apos o loop terminar, recebe leads do Supabase e monta lista para Victor.\nvar items = $input.all();\nvar leads = [];\nitems.forEach(function(i) {\n  var d = i.json;\n  if (d && d.email) leads.push(d);\n});\n\nvar empresa_nome = \"\";\ntry { empresa_nome = $(\"verificar_empresa\").first().json.nome || \"\"; } catch(e) {}\n\nconsole.log(\"Leads para Victor:\", leads.length, \"| Empresa:\", empresa_nome);\n\nif (leads.length === 0) {\n  return [{ json: {\n    _sem_leads: true,\n    _assunto: \"Victor - sem leads hoje (\" + empresa_nome + \")\",\n    _corpo: \"Nenhum lead com email corporativo valido encontrado hoje para \" + empresa_nome + \".\\n\\nO sistema processou perfis do LinkedIn mas nenhum passou nos filtros.\\n\\nAmanha o sistema roda novamente as 8h.\",\n    _total: 0\n  } }];\n}\n\nvar linhas = leads.map(function(l, i) {\n  return (i+1) + \". \" + (l.nome || l.empresa || \"\") + \" - \" + (l.cargo_encontrado || l.cargo || \"\") + \" @ \" + (l.empresa_encontrada || l.empresa_nome_lead || \"\") +\n    \"\\n   Email: \" + l.email +\n    (l.linkedin_url ? \"\\n   LinkedIn: \" + l.linkedin_url : \"\");\n});\n\nvar hoje = new Date().toLocaleDateString(\"pt-BR\");\nvar corpo = \"Victor, seguem os leads de hoje (\" + hoje + \") para \" + empresa_nome + \":\\n\\n\" +\n  linhas.join(\"\\n\\n\") +\n  \"\\n\\n---\\nTotal: \" + leads.length + \" leads com email corporativo verificado.\" +\n  \"\\nFonte: LinkedIn (HarvestAPI) - emails verificados por SMTP.\" +\n  \"\\nSistema rodara novamente amanha as 8h.\";\n\nreturn [{ json: {\n  _assunto:    \"Victor - \" + leads.length + \" leads hoje: \" + empresa_nome,\n  _corpo:      corpo,\n  _total:      leads.length,\n  empresa_nome: empresa_nome\n} }];"
+      },
+      "id": "9757cba5-6f36-4d4f-bb7d-3daf71a275cb",
+      "name": "montar_lista",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -110624,
+        -91248
+      ]
+    },
+    {
+      "parameters": {
+        "sendTo": "guimaraesclebeclebe@gmail.com ",
+        "subject": "={{ $json._assunto }}",
+        "emailType": "text",
+        "message": "={{ $json._corpo }}",
+        "options": {}
+      },
+      "id": "90201510-168f-49a8-bd80-4263b0934055",
+      "name": "enviar_lista_victor",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        -110400,
+        -91248
+      ],
+      "webhookId": "6f757930-d601-4553-8026-624a0dbf49a5",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "OkEAgt16ZWgLOore",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://tuctjosvxdzbfnyvvodc.supabase.co/rest/v1/searches?empresa_id=eq.{{ $(\"verificar_empresa\").first().json.id }}&status=eq.PENDENTE",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR1Y3Rqb3N2eGR6YmZueXZ2b2RjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxMTk3MzYsImV4cCI6MjA5NDY5NTczNn0.jPjPQz18lsEdpQLSxQCz2kP0uObAQ1XTs1Kj5qANcko"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR1Y3Rqb3N2eGR6YmZueXZ2b2RjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxMTk3MzYsImV4cCI6MjA5NDY5NTczNn0.jPjPQz18lsEdpQLSxQCz2kP0uObAQ1XTs1Kj5qANcko"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=representation"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ JSON.stringify({ status: \"CONCLUÍDA\", total_encontrados: $(\"montar_lista\").first().json._total || 0 }) }}",
+        "options": {}
+      },
+      "id": "b6da2b4d-f84d-4998-b612-41aaf7d784f8",
+      "name": "patch_search_concluida",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -110176,
+        -91248
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {},
+      "id": "d8bf319b-fb2e-48fb-9e8a-23dbfb84b270",
+      "name": "sem_empresa_ativa",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        -112640,
+        -90888
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "df984cb3-b353-4835-88b3-ed478165a8ff",
+      "name": "sem_resultados_harvestapi",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        -111072,
+        -91056
+      ]
+    }
+  ],
+  "connections": {
+    "schedule_diario": {
+      "main": [
+        [
+          {
+            "node": "calcular_semana",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "webhook_dashboard": {
+      "main": [
+        [
+          {
+            "node": "calcular_semana",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "calcular_semana": {
+      "main": [
+        [
+          {
+            "node": "buscar_empresa_supabase",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "buscar_empresa_supabase": {
+      "main": [
+        [
+          {
+            "node": "verificar_empresa",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "verificar_empresa": {
+      "main": [
+        [
+          {
+            "node": "if_empresa_ativa",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "if_empresa_ativa": {
+      "main": [
+        [
+          {
+            "node": "criar_search",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "sem_empresa_ativa",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "criar_search": {
+      "main": [
+        [
+          {
+            "node": "montar_harvestapi",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "montar_harvestapi": {
+      "main": [
+        [
+          {
+            "node": "iniciar_run_apify",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "iniciar_run_apify": {
+      "main": [
+        [
+          {
+            "node": "aguardar_run_apify",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "aguardar_run_apify": {
+      "main": [
+        [
+          {
+            "node": "buscar_dataset_apify",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "buscar_dataset_apify": {
+      "main": [
+        [
+          {
+            "node": "processar_leads",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "processar_leads": {
+      "main": [
+        [
+          {
+            "node": "if_tem_leads",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "if_tem_leads": {
+      "main": [
+        [
+          {
+            "node": "loop_lead",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "sem_resultados_harvestapi",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "loop_lead": {
+      "main": [
+        [
+          {
+            "node": "checar_dedup",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "buscar_leads_salvos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "checar_dedup": {
+      "main": [
+        [
+          {
+            "node": "verificar_dedup",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "verificar_dedup": {
+      "main": [
+        [
+          {
+            "node": "if_lead_novo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "if_lead_novo": {
+      "main": [
+        [
+          {
+            "node": "salvar_lead",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "loop_lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "salvar_lead": {
+      "main": [
+        [
+          {
+            "node": "registrar_enviado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "registrar_enviado": {
+      "main": [
+        [
+          {
+            "node": "loop_lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "buscar_leads_salvos": {
+      "main": [
+        [
+          {
+            "node": "montar_lista",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "montar_lista": {
+      "main": [
+        [
+          {
+            "node": "enviar_lista_victor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "enviar_lista_victor": {
+      "main": [
+        [
+          {
+            "node": "patch_search_concluida",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "87b3704f56ee98b2abf0c87369308958924a10455c534145841b196eb55380ee"
+  },
+  "name": "Fluxo Victor Selfe v3 - min_funcionarios override + categoria dinamica"
+}

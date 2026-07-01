@@ -31,29 +31,33 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Body inválido' }, { status: 400 })
   }
 
-  const { pais, estado, cidade, tipo_loja, quantidade, fonte, municipio_id, bairro } = body as Record<string, unknown>
+  const { pais, estado, cidade, tipo_loja, quantidade, fonte, municipio_id, bairro, min_funcionarios } = body as Record<string, unknown>
 
-  if (!pais || !estado || !cidade || !tipo_loja) {
+  const isLinkedIn = fonte === 'linkedin'
+
+  if (!isLinkedIn && (!pais || !estado || !cidade || !tipo_loja)) {
     return NextResponse.json({ error: 'Todos os campos são obrigatórios' }, { status: 400 })
   }
 
   const qty = quantidade ? Number(quantidade) : 10
-  const fonteValida = (['google_maps', 'instagram', 'ambos'] as const).includes(fonte as 'google_maps' | 'instagram' | 'ambos')
-    ? (fonte as 'google_maps' | 'instagram' | 'ambos')
+  const minFunc = min_funcionarios ? Number(min_funcionarios) : 0
+  const fonteValida = (['google_maps', 'instagram', 'ambos', 'linkedin'] as const).includes(fonte as 'google_maps' | 'instagram' | 'ambos' | 'linkedin')
+    ? (fonte as 'google_maps' | 'instagram' | 'ambos' | 'linkedin')
     : 'google_maps'
 
   const { data: search, error: dbError } = await supabase
     .from('searches')
     .insert({
-      pais: String(pais),
-      estado: String(estado),
-      cidade: String(cidade),
+      pais: isLinkedIn ? 'Brasil' : String(pais),
+      estado: isLinkedIn ? 'Nacional' : String(estado),
+      cidade: isLinkedIn ? 'Nacional' : String(cidade),
       quantidade: qty,
-      tipo_loja: String(tipo_loja),
+      tipo_loja: isLinkedIn ? 'linkedin' : String(tipo_loja),
       fonte: fonteValida,
       status: 'PENDENTE',
       municipio_id: municipio_id ? Number(municipio_id) : null,
       bairro: bairro ? String(bairro) : null,
+      min_funcionarios: minFunc,
     })
     .select('id')
     .single()
@@ -62,7 +66,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Erro ao salvar busca' }, { status: 500 })
   }
 
-  const webhookUrl = process.env.N8N_WEBHOOK_URL
+  const webhookUrl = isLinkedIn
+    ? process.env.N8N_WEBHOOK_LINKEDIN_URL
+    : process.env.N8N_WEBHOOK_URL
+
   if (webhookUrl) {
     try {
       await fetch(webhookUrl, {
@@ -70,14 +77,15 @@ export async function POST(request: NextRequest) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           search_id: search.id,
-          pais: String(pais),
-          estado: String(estado),
-          cidade: String(cidade),
+          pais: isLinkedIn ? 'Brasil' : String(pais),
+          estado: isLinkedIn ? 'Nacional' : String(estado),
+          cidade: isLinkedIn ? 'Nacional' : String(cidade),
           quantidade: qty,
-          tipo_loja: String(tipo_loja),
+          tipo_loja: isLinkedIn ? 'linkedin' : String(tipo_loja),
           fonte: fonteValida,
           municipio_id: municipio_id ? Number(municipio_id) : null,
           bairro: bairro ? String(bairro) : null,
+          min_funcionarios: minFunc,
         }),
       })
     } catch {

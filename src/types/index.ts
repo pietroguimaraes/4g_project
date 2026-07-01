@@ -50,7 +50,7 @@ export interface Search {
   estado: string
   cidade: string
   tipo_loja?: string
-  fonte?: 'google_maps' | 'instagram' | 'ambos'
+  fonte?: 'google_maps' | 'instagram' | 'ambos' | 'linkedin'
   quantidade: number
   status: SearchStatus
   total_encontrados?: number
@@ -59,5 +59,6 @@ export interface Search {
   num_rodadas?: number
   municipio_id?: number
   bairro?: string
+  min_funcionarios?: number
   created_at: string
 }

@@ -65,7 +65,8 @@ export function SearchForm({ onSearchComplete }: SearchFormProps) {
   const [cidades, setCidades] = useState<{id: number; nome: string}[]>([])
   const [loadingCidades, setLoadingCidades] = useState(false)
   const [tipoLoja, setTipoLoja] = useState('')
-  const [fonte, setFonte] = useState<'google_maps' | 'instagram' | 'ambos'>('google_maps')
+  const [fonte, setFonte] = useState<'google_maps' | 'instagram' | 'ambos' | 'linkedin'>('google_maps')
+  const [minFuncionarios, setMinFuncionarios] = useState(0)
   const [quantidade, setQuantidade] = useState(10)
   const [loading, setLoading] = useState(false)
   const [feedback, setFeedback] = useState<{ tipo: 'erro' | 'sucesso' | 'progresso'; mensagem: string } | null>(null)
@@ -151,21 +152,25 @@ export function SearchForm({ onSearchComplete }: SearchFormProps) {
     }, 3000)
   }
 
+  const isLinkedIn = fonte === 'linkedin'
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setFeedback(null)
 
-    if (!estado) {
-      setFeedback({ tipo: 'erro', mensagem: 'Selecione o estado.' })
-      return
-    }
-    if (!cidade) {
-      setFeedback({ tipo: 'erro', mensagem: 'Selecione a cidade.' })
-      return
-    }
-    if (!tipoLoja) {
-      setFeedback({ tipo: 'erro', mensagem: 'Selecione o tipo de loja.' })
-      return
+    if (!isLinkedIn) {
+      if (!estado) {
+        setFeedback({ tipo: 'erro', mensagem: 'Selecione o estado.' })
+        return
+      }
+      if (!cidade) {
+        setFeedback({ tipo: 'erro', mensagem: 'Selecione a cidade.' })
+        return
+      }
+      if (!tipoLoja) {
+        setFeedback({ tipo: 'erro', mensagem: 'Selecione o tipo de loja.' })
+        return
+      }
     }
 
     stopPolling()
@@ -173,18 +178,26 @@ export function SearchForm({ onSearchComplete }: SearchFormProps) {
     try {
       const result = await createSearch({
         pais: 'Brasil',
-        estado,
-        cidade,
-        municipio_id: municipioId ?? undefined,
-        bairro: bairro || undefined,
+        estado: isLinkedIn ? 'Nacional' : estado,
+        cidade: isLinkedIn ? 'Nacional' : cidade,
+        municipio_id: isLinkedIn ? undefined : (municipioId ?? undefined),
+        bairro: isLinkedIn ? undefined : (bairro || undefined),
         quantidade,
-        tipo_loja: tipoLoja,
+        tipo_loja: isLinkedIn ? 'linkedin' : tipoLoja,
         fonte,
+        min_funcionarios: isLinkedIn ? minFuncionarios : undefined,
       })
-      const fonteLabel = fonte === 'google_maps' ? 'Google Maps' : fonte === 'instagram' ? 'Instagram' : 'Google Maps e Instagram'
+      const fonteLabel =
+        fonte === 'google_maps' ? 'Google Maps' :
+        fonte === 'instagram' ? 'Instagram' :
+        fonte === 'linkedin' ? 'LinkedIn' :
+        'Google Maps e Instagram'
+      const minLabel = isLinkedIn && minFuncionarios > 0 ? ` (${minFuncionarios.toLocaleString()}+ funcionários)` : ''
       setFeedback({
         tipo: 'progresso',
-        mensagem: `Buscando empresas do tipo "${tipoLoja}" em ${cidade} via ${fonteLabel}... Isso pode levar alguns minutos.`,
+        mensagem: isLinkedIn
+          ? `Buscando contatos B2B no LinkedIn${minLabel}... Isso pode levar até 20 minutos.`
+          : `Buscando empresas do tipo "${tipoLoja}" em ${cidade} via ${fonteLabel}... Isso pode levar alguns minutos.`,
       })
       setEstado('')
       setCidade('')
@@ -208,76 +221,81 @@ export function SearchForm({ onSearchComplete }: SearchFormProps) {
       </div>
 
       <div className="grid grid-cols-1 gap-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Estado</label>
-          <select
-            value={estado}
-            onChange={(e) => setEstado(e.target.value)}
-            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white disabled:text-gray-400"
-            disabled={isFormDisabled}
-          >
-            <option value="">Selecione...</option>
-            {ESTADOS.map((e) => (
-              <option key={e.uf} value={e.uf}>{e.uf} — {e.nome}</option>
-            ))}
-          </select>
-        </div>
+        {!isLinkedIn && (
+          <>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Estado</label>
+              <select
+                value={estado}
+                onChange={(e) => setEstado(e.target.value)}
+                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white disabled:text-gray-400"
+                disabled={isFormDisabled}
+              >
+                <option value="">Selecione...</option>
+                {ESTADOS.map((e) => (
+                  <option key={e.uf} value={e.uf}>{e.uf} — {e.nome}</option>
+                ))}
+              </select>
+            </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Cidade {loadingCidades && <span className="text-blue-500 font-normal">(carregando...)</span>}
-          </label>
-          <select
-            value={cidade}
-            onChange={(e) => {
-              const nomeSelecionado = e.target.value
-              setCidade(nomeSelecionado)
-              const found = cidades.find(c => c.nome === nomeSelecionado)
-              setMunicipioId(found ? found.id : null)
-            }}
-            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white disabled:text-gray-400"
-            disabled={isFormDisabled || !estado}
-          >
-            <option value="">
-              {!estado ? 'Selecione o estado primeiro' : loadingCidades ? 'Carregando cidades...' : 'Selecione...'}
-            </option>
-            {[...cidades]
-              .sort((a, b) => {
-                const capital = CAPITAIS[estado]
-                if (a.nome === capital) return -1
-                if (b.nome === capital) return 1
-                return 0
-              })
-              .map((c) => {
-                const isCapital = CAPITAIS[estado] === c.nome
-                return (
-                  <option key={c.id} value={c.nome} style={isCapital ? { color: '#b8860b', fontWeight: '700' } : undefined}>
-                    {isCapital ? `★ ${c.nome}` : c.nome}
-                  </option>
-                )
-              })}
-          </select>
-        </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Cidade {loadingCidades && <span className="text-blue-500 font-normal">(carregando...)</span>}
+              </label>
+              <select
+                value={cidade}
+                onChange={(e) => {
+                  const nomeSelecionado = e.target.value
+                  setCidade(nomeSelecionado)
+                  const found = cidades.find(c => c.nome === nomeSelecionado)
+                  setMunicipioId(found ? found.id : null)
+                }}
+                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white disabled:text-gray-400"
+                disabled={isFormDisabled || !estado}
+              >
+                <option value="">
+                  {!estado ? 'Selecione o estado primeiro' : loadingCidades ? 'Carregando cidades...' : 'Selecione...'}
+                </option>
+                {[...cidades]
+                  .sort((a, b) => {
+                    const capital = CAPITAIS[estado]
+                    if (a.nome === capital) return -1
+                    if (b.nome === capital) return 1
+                    return 0
+                  })
+                  .map((c) => {
+                    const isCapital = CAPITAIS[estado] === c.nome
+                    return (
+                      <option key={c.id} value={c.nome} style={isCapital ? { color: '#b8860b', fontWeight: '700' } : undefined}>
+                        {isCapital ? `★ ${c.nome}` : c.nome}
+                      </option>
+                    )
+                  })}
+              </select>
+            </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Bairro <span className="text-gray-400 font-normal">(opcional)</span></label>
-          <input
-            type="text"
-            value={bairro}
-            onChange={(e) => setBairro(e.target.value)}
-            placeholder="Ex: Centro, Vila Madalena..."
-            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:text-gray-400"
-            disabled={isFormDisabled}
-          />
-        </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Bairro <span className="text-gray-400 font-normal">(opcional)</span></label>
+              <input
+                type="text"
+                value={bairro}
+                onChange={(e) => setBairro(e.target.value)}
+                placeholder="Ex: Centro, Vila Madalena..."
+                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:text-gray-400"
+                disabled={isFormDisabled}
+              />
+            </div>
+          </>
+        )}
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">Fonte de busca</label>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             {([
               { value: 'google_maps', label: '🗺️ Google Maps' },
               { value: 'instagram', label: '📸 Instagram' },
               { value: 'ambos', label: '⚡ Ambos' },
+              { value: 'linkedin', label: '💼 LinkedIn B2B' },
             ] as const).map((op) => (
               <button
                 key={op.value}
@@ -294,22 +312,48 @@ export function SearchForm({ onSearchComplete }: SearchFormProps) {
               </button>
             ))}
           </div>
+          {isLinkedIn && (
+            <p className="mt-1 text-xs text-gray-500">
+              LinkedIn B2B busca contatos com cargo e email corporativo. A empresa alvo da semana é selecionada automaticamente.
+            </p>
+          )}
         </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Tipo de loja</label>
-          <select
-            value={tipoLoja}
-            onChange={(e) => setTipoLoja(e.target.value)}
-            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white disabled:text-gray-400"
-            disabled={isFormDisabled}
-          >
-            <option value="">Selecione...</option>
-            {TIPOS_LOJA.map((tipo) => (
-              <option key={tipo} value={tipo}>{tipo}</option>
-            ))}
-          </select>
-        </div>
+        {isLinkedIn ? (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Mínimo de funcionários <span className="text-gray-400 font-normal">(filtro de empresa)</span>
+            </label>
+            <select
+              value={minFuncionarios}
+              onChange={(e) => setMinFuncionarios(Number(e.target.value))}
+              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white disabled:text-gray-400"
+              disabled={isFormDisabled}
+            >
+              <option value={0}>Qualquer tamanho</option>
+              <option value={50}>50+ funcionários</option>
+              <option value={200}>200+ funcionários</option>
+              <option value={500}>500+ funcionários</option>
+              <option value={1000}>1.000+ funcionários</option>
+              <option value={5000}>5.000+ funcionários</option>
+            </select>
+          </div>
+        ) : (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Tipo de loja</label>
+            <select
+              value={tipoLoja}
+              onChange={(e) => setTipoLoja(e.target.value)}
+              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white disabled:text-gray-400"
+              disabled={isFormDisabled}
+            >
+              <option value="">Selecione...</option>
+              {TIPOS_LOJA.map((tipo) => (
+                <option key={tipo} value={tipo}>{tipo}</option>
+              ))}
+            </select>
+          </div>
+        )}
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Quantidade de empresas</label>

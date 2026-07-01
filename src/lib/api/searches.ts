@@ -4,9 +4,10 @@ export interface CreateSearchData {
   cidade: string
   quantidade: number
   tipo_loja: string
-  fonte?: 'google_maps' | 'instagram' | 'ambos'
+  fonte?: 'google_maps' | 'instagram' | 'ambos' | 'linkedin'
   municipio_id?: number
   bairro?: string
+  min_funcionarios?: number
 }
 
 export async function createSearch(data: CreateSearchData): Promise<{ id: string; status: string }> {
