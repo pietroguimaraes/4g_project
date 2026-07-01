@@ -87,7 +87,7 @@ export async function POST(request: NextRequest) {
         await fetch(prospectuarUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ telefone: String(telefone), empresa: String(empresa) }),
+          body: JSON.stringify({ telefone: String(telefone), empresa: String(empresa), cidade: cidade ? String(cidade) : '' }),
         })
       } catch {
         // Webhook falhou mas lead já foi salvo — segue em frente
