@@ -30,6 +30,12 @@ export default function DashboardLayout({
             >
               Manual
             </Link>
+            <Link
+              href="/shopee"
+              className="text-sm text-gray-400 hover:text-white font-medium transition-colors"
+            >
+              Shopee
+            </Link>
           </div>
         </div>
         <LogoutButton />
